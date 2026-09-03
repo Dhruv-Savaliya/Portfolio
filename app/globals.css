@@ -1,0 +1,428 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500&family=Syne:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   CSS CUSTOM PROPERTIES — DESIGN TOKENS
+   ============================================ */
+:root {
+  /* Colors */
+  --color-bg: #030303;
+  --color-surface: #0A0A0A;
+  --color-surface-2: #111111;
+  --color-border: #1A1A1A;
+  --color-text: #F0EDE6;
+  --color-text-muted: #555555;
+  --color-lime: #C8FF00;
+  --color-cyan: #00E5FF;
+
+  /* Typography */
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-accent: 'Syne', sans-serif;
+
+  /* Easing */
+  --ease-expo-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-expo-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-expo-in-out: cubic-bezier(0.87, 0, 0.13, 1);
+  --ease-circ-out: cubic-bezier(0, 0.55, 0.45, 1);
+
+  /* Durations */
+  --dur-fast: 0.4s;
+  --dur-normal: 0.8s;
+  --dur-slow: 1.2s;
+  --dur-very-slow: 2.0s;
+}
+
+/* ============================================
+   BASE RESET & GLOBAL STYLES
+   ============================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+body {
+  background: var(--color-bg);
+  overflow-x: hidden;
+  cursor: none;
+}
+
+/* ============================================
+   SELECTION
+   ============================================ */
+::selection {
+  background: var(--color-lime);
+  color: var(--color-bg);
+}
+
+/* ============================================
+   SCROLLBAR
+   ============================================ */
+::-webkit-scrollbar {
+  width: 2px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 1px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+/* ============================================
+   CUSTOM CURSOR
+   ============================================ */
+.cursor-dot {
+  position: fixed;
+  width: 6px;
+  height: 6px;
+  background: var(--color-lime);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.3s var(--ease-expo-out);
+  will-change: transform;
+}
+
+.cursor-ring {
+  position: fixed;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(200, 255, 0, 0.4);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9998;
+  transform: translate(-50%, -50%);
+  transition: width 0.4s var(--ease-expo-out), height 0.4s var(--ease-expo-out), opacity 0.3s;
+  will-change: transform;
+}
+
+.cursor-ring.is-hovering {
+  width: 60px;
+  height: 60px;
+  border-color: rgba(200, 255, 0, 0.8);
+}
+
+/* ============================================
+   TYPOGRAPHY UTILITIES
+   ============================================ */
+.font-display { font-family: var(--font-display); }
+.font-body    { font-family: var(--font-body); }
+.font-mono    { font-family: var(--font-mono); }
+.font-accent  { font-family: var(--font-accent); }
+
+/* Text clip gradient for headings */
+.text-gradient-lime {
+  background: linear-gradient(135deg, var(--color-lime) 0%, #8bff00 50%, var(--color-lime) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Oversized display text */
+.text-display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 0.88;
+  letter-spacing: -0.04em;
+}
+
+.text-editorial {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 0.92;
+  letter-spacing: -0.03em;
+}
+
+.text-label {
+  font-family: var(--font-accent);
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+}
+
+.text-label-mono {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+}
+
+/* ============================================
+   SPLIT TEXT — for GSAP SplitText
+   ============================================ */
+.split-line {
+  overflow: hidden;
+  display: block;
+}
+
+.split-line .line-inner {
+  display: block;
+  transform: translateY(110%);
+  will-change: transform;
+}
+
+/* ============================================
+   NOISE / GRAIN OVERLAY
+   ============================================ */
+.grain-overlay {
+  position: fixed;
+  inset: -200%;
+  width: 400%;
+  height: 400%;
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  animation: grain 0.8s steps(1) infinite;
+}
+
+@keyframes grain {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-2%, -3%); }
+  20% { transform: translate(-4%, 1%); }
+  30% { transform: translate(1%, -2%); }
+  40% { transform: translate(-1%, 4%); }
+  50% { transform: translate(-3%, 1%); }
+  60% { transform: translate(2%, -3%); }
+  70% { transform: translate(-2%, 2%); }
+  80% { transform: translate(3%, -1%); }
+  90% { transform: translate(-1%, 3%); }
+}
+
+/* ============================================
+   HORIZONTAL RULE / DIVIDER
+   ============================================ */
+.ds-rule {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  width: 100%;
+}
+
+/* ============================================
+   LINKS
+   ============================================ */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ============================================
+   FOCUS VISIBLE
+   ============================================ */
+:focus-visible {
+  outline: 2px solid var(--color-lime);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+/* ============================================
+   SECTION LAYOUT UTILITIES
+   ============================================ */
+.section-padding {
+  padding: 10vw 6vw;
+}
+
+@media (max-width: 768px) {
+  .section-padding {
+    padding: 20vw 6vw;
+  }
+}
+
+/* ============================================
+   PRELOADER STYLES
+   ============================================ */
+.preloader {
+  position: fixed;
+  inset: 0;
+  background: var(--color-bg);
+  z-index: 9000;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 4vw 5vw;
+  overflow: hidden;
+}
+
+.preloader__progress-bar-track {
+  height: 2px;
+  background: var(--color-border);
+  position: relative;
+  overflow: hidden;
+  flex: 1;
+}
+
+.preloader__progress-bar-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: var(--color-lime);
+  transform-origin: left;
+  transition: width 0.15s ease-out;
+}
+
+/* ============================================
+   THREE.JS CANVAS
+   ============================================ */
+canvas {
+  display: block;
+}
+
+/* ============================================
+   MAGNETIC BUTTON
+   ============================================ */
+.magnetic-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: none;
+  will-change: transform;
+}
+
+/* ============================================
+   PROJECT CHAPTER
+   ============================================ */
+.project-number {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  color: var(--color-lime);
+}
+
+/* ============================================
+   TECH TAGS
+   ============================================ */
+.tech-tag {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  padding: 0.3rem 0.75rem;
+  border-radius: 100px;
+  transition: all 0.3s var(--ease-expo-out);
+}
+
+.tech-tag:hover {
+  border-color: var(--color-lime);
+  color: var(--color-lime);
+}
+
+/* ============================================
+   SCAN LINE EFFECT
+   ============================================ */
+.scan-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.scan-effect::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--color-lime), transparent);
+  animation: scan-line 3s linear infinite;
+}
+
+@keyframes scan-line {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(100vh); }
+}
+
+/* ============================================
+   CODE BLOCK STYLES
+   ============================================ */
+.code-block {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.8;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.code-block .key   { color: var(--color-cyan); }
+.code-block .value { color: var(--color-lime); }
+.code-block .str   { color: #ff9f43; }
+.code-block .num   { color: #a29bfe; }
+
+/* ============================================
+   NAVIGATION
+   ============================================ */
+.nav-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--color-bg);
+  z-index: 8000;
+  display: flex;
+  flex-direction: column;
+  padding: 4vw 5vw;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.nav-overlay.is-open {
+  pointer-events: all;
+  visibility: visible;
+}
+
+/* ============================================
+   REDUCED MOTION
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .grain-overlay {
+    display: none;
+  }
+}
+
+/* ============================================
+   MOBILE ADJUSTMENTS
+   ============================================ */
+@media (max-width: 768px) {
+  body {
+    cursor: auto;
+  }
+
+  .cursor-dot,
+  .cursor-ring {
+    display: none;
+  }
+}

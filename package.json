@@ -1,0 +1,40 @@
+{
+  "name": "dhruv-portfolio",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "15.3.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "three": "^0.170.0",
+    "@react-three/fiber": "^8.17.10",
+    "@react-three/drei": "^9.122.0",
+    "@react-three/postprocessing": "^2.16.2",
+    "postprocessing": "^6.37.1",
+    "gsap": "^3.12.7",
+    "lenis": "^1.1.20",
+    "zustand": "^5.0.3",
+    "framer-motion": "^11.18.2",
+    "howler": "^2.2.4",
+    "clsx": "^2.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/three": "^0.170.0",
+    "@types/howler": "^2.2.12",
+    "typescript": "^5",
+    "eslint": "^9",
+    "eslint-config-next": "15.3.4",
+    "tailwindcss": "^3.4.17",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.5.1"
+  }
+}
