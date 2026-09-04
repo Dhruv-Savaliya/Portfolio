@@ -3,11 +3,6 @@
 import { useRef, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 
-const Experience = dynamic(() => import('@/components/three/Experience'), {
-  ssr: false,
-  loading: () => null,
-});
-
 export default function Footer() {
   const sectionRef = useRef<HTMLElement>(null);
   const [visible, setVisible] = useState(false);

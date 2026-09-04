@@ -154,12 +154,10 @@ export default function Preloader({ onComplete }: PreloaderProps) {
     }));
 
   const [currentTask, setCurrentTask] = useState('INITIALIZING');
-  const [isExiting, setIsExiting] = useState(false);
   const preloaderRef = useRef<HTMLDivElement>(null);
   const hasStarted = useRef(false);
 
   const startExit = useCallback(() => {
-    setIsExiting(true);
     setLoadingComplete(true);
 
     // Cinematic exit: clip-path wipe up
