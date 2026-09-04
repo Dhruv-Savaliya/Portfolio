@@ -267,13 +267,13 @@ export default function DigitalCore({
 
   // Build geometry
   const geometry = useMemo(() => {
-    const geo = new THREE.IcosahedronGeometry(1.2, 5);
+    const geo = new (THREE as any).IcosahedronGeometry(1.2, 5);
     return geo;
   }, []);
 
   // Build wireframe geometry (lower detail)
   const wireGeometry = useMemo(() => {
-    const geo = new THREE.IcosahedronGeometry(1.25, 2);
+    const geo = new (THREE as any).IcosahedronGeometry(1.25, 2);
     return geo;
   }, []);
 
