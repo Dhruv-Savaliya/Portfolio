@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useState } from 'react';
-import dynamic from 'next/dynamic';
+
 
 export default function Footer() {
   const sectionRef = useRef<HTMLElement>(null);

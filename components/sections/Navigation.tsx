@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useShallow } from 'zustand/react/shallow';
 import { useExperienceStore } from '@/lib/store';
 import { useSound } from '@/hooks/useSound';
 
@@ -106,10 +107,10 @@ function MenuOverlay({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
 // NAVIGATION
 // ============================================
 export default function Navigation() {
-  const { menuOpen, toggleMenu } = useExperienceStore((s) => ({
+  const { menuOpen, toggleMenu } = useExperienceStore(useShallow((s) => ({
     menuOpen: s.menuOpen,
     toggleMenu: s.toggleMenu,
-  }));
+  })));
   const { play } = useSound();
   const [scrolled, setScrolled] = useState(false);
   const navRef = useRef<HTMLElement>(null);

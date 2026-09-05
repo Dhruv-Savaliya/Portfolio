@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useExperienceStore } from '@/lib/store';
 import { useSound } from '@/hooks/useSound';
 
@@ -63,10 +64,10 @@ const LOADING_TASKS: Array<{ label: string; weight: number; fn: () => Promise<vo
 // SOUND TOGGLE
 // ============================================
 function SoundToggle() {
-  const { soundEnabled, toggleSound } = useExperienceStore((s) => ({
+  const { soundEnabled, toggleSound } = useExperienceStore(useShallow((s) => ({
     soundEnabled: s.soundEnabled,
     toggleSound: s.toggleSound,
-  }));
+  })));
   const { play } = useSound();
 
   return (
@@ -147,11 +148,11 @@ interface PreloaderProps {
 
 export default function Preloader({ onComplete }: PreloaderProps) {
   const { setLoadingProgress, setLoadingComplete, loadingProgress } =
-    useExperienceStore((s) => ({
+    useExperienceStore(useShallow((s) => ({
       setLoadingProgress: s.setLoadingProgress,
       setLoadingComplete: s.setLoadingComplete,
       loadingProgress: s.loadingProgress,
-    }));
+    })));
 
   const [currentTask, setCurrentTask] = useState('INITIALIZING');
   const preloaderRef = useRef<HTMLDivElement>(null);

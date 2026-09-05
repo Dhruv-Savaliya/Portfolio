@@ -262,18 +262,21 @@ export default function DigitalCore({
   const particlesRef = useRef<THREE.Points>(null);
   const groupRef = useRef<THREE.Group>(null);
 
-  const coreMorphTarget = useExperienceStore((s) => s.coreMorphTarget);
+  type MorphTarget = keyof typeof MORPH_CONFIGS;
+  const coreMorphTarget = useExperienceStore(
+    (s) => s.coreMorphTarget as MorphTarget
+  );
   const morphProgressRef = useRef(0);
 
   // Build geometry
   const geometry = useMemo(() => {
-    const geo = new (THREE as any).IcosahedronGeometry(1.2, 5);
+    const geo = new THREE.IcosahedronGeometry(1.2, 5);
     return geo;
   }, []);
 
   // Build wireframe geometry (lower detail)
   const wireGeometry = useMemo(() => {
-    const geo = new (THREE as any).IcosahedronGeometry(1.25, 2);
+    const geo = new THREE.IcosahedronGeometry(1.25, 2);
     return geo;
   }, []);
 
@@ -369,7 +372,7 @@ export default function DigitalCore({
   // Animate
   useFrame((state) => {
     const t = state.clock.elapsedTime;
-    const config = MORPH_CONFIGS[coreMorphTarget];
+    const config = MORPH_CONFIGS[coreMorphTarget as keyof typeof MORPH_CONFIGS];
 
     // Lerp morph progress
     morphProgressRef.current = THREE.MathUtils.lerp(
