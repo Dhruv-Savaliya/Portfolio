@@ -8,15 +8,33 @@
    CSS CUSTOM PROPERTIES — DESIGN TOKENS
    ============================================ */
 :root {
-  /* Colors */
-  --color-bg: #030303;
-  --color-surface: #0A0A0A;
-  --color-surface-2: #111111;
-  --color-border: #1A1A1A;
-  --color-text: #F0EDE6;
-  --color-text-muted: #555555;
-  --color-lime: #C8FF00;
-  --color-cyan: #00E5FF;
+  /* Master Prompt Section 07 — Porcelain, Ink, and Electric Blue */
+  --color-bg: #080B10;
+  --color-surface: #10151D;
+  --color-surface-2: #18202C;
+  --color-border: rgba(244, 246, 250, 0.10);
+  --color-border-subtle: rgba(244, 246, 250, 0.06);
+  --color-text: #F4F6FA;
+  --color-text-muted: #9AA4B2;
+  --color-text-dim: #4A5565;
+
+  /* Porcelain Light Values */
+  --color-porcelain: #F3F5F8;
+  --color-porcelain-surface: #E8ECF2;
+  --color-porcelain-border: rgba(8, 11, 16, 0.12);
+  --color-ink: #080B10;
+  --color-ink-muted: #4A5565;
+
+  /* Signature Electric Blue Accent */
+  --color-blue: #356DFF;
+  --color-blue-highlight: #7EA2FF;
+  --color-blue-deep: #1D4ED8;
+  --color-blue-glow: rgba(53, 109, 255, 0.25);
+
+  /* Secondary Signal (restrained) */
+  --color-signal: #B8FF5A;
+  --color-lime: #B8FF5A;
+  --color-cyan: #7EA2FF;
 
   /* Typography */
   --font-display: 'Space Grotesk', sans-serif;
@@ -66,15 +84,15 @@ body {
    SELECTION
    ============================================ */
 ::selection {
-  background: var(--color-lime);
-  color: var(--color-bg);
+  background: var(--color-blue);
+  color: #FFFFFF;
 }
 
 /* ============================================
    SCROLLBAR
    ============================================ */
 ::-webkit-scrollbar {
-  width: 2px;
+  width: 3px;
 }
 
 ::-webkit-scrollbar-track {
@@ -82,12 +100,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 1px;
+  background: rgba(244, 246, 250, 0.15);
+  border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-muted);
+  background: var(--color-blue);
 }
 
 /* ============================================
@@ -95,9 +113,9 @@ body {
    ============================================ */
 .cursor-dot {
   position: fixed;
-  width: 6px;
-  height: 6px;
-  background: var(--color-lime);
+  width: 5px;
+  height: 5px;
+  background: var(--color-blue-highlight);
   border-radius: 50%;
   pointer-events: none;
   z-index: 9999;
@@ -108,21 +126,22 @@ body {
 
 .cursor-ring {
   position: fixed;
-  width: 36px;
-  height: 36px;
-  border: 1px solid rgba(200, 255, 0, 0.4);
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(126, 162, 255, 0.35);
   border-radius: 50%;
   pointer-events: none;
   z-index: 9998;
   transform: translate(-50%, -50%);
-  transition: width 0.4s var(--ease-expo-out), height 0.4s var(--ease-expo-out), opacity 0.3s;
+  transition: width 0.4s var(--ease-expo-out), height 0.4s var(--ease-expo-out), opacity 0.3s, border-color 0.3s;
   will-change: transform;
 }
 
 .cursor-ring.is-hovering {
-  width: 60px;
-  height: 60px;
-  border-color: rgba(200, 255, 0, 0.8);
+  width: 54px;
+  height: 54px;
+  border-color: var(--color-blue-highlight);
+  background: rgba(53, 109, 255, 0.08);
 }
 
 /* ============================================
@@ -134,8 +153,15 @@ body {
 .font-accent  { font-family: var(--font-accent); }
 
 /* Text clip gradient for headings */
+.text-gradient-blue {
+  background: linear-gradient(135deg, var(--color-blue) 0%, var(--color-blue-highlight) 50%, #B8FF5A 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 .text-gradient-lime {
-  background: linear-gradient(135deg, var(--color-lime) 0%, #8bff00 50%, var(--color-lime) 100%);
+  background: linear-gradient(135deg, var(--color-blue-highlight) 0%, #FFFFFF 50%, var(--color-blue) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -235,7 +261,7 @@ a {
    FOCUS VISIBLE
    ============================================ */
 :focus-visible {
-  outline: 2px solid var(--color-lime);
+  outline: 2px solid var(--color-blue);
   outline-offset: 4px;
   border-radius: 2px;
 }

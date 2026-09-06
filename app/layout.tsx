@@ -54,14 +54,14 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: 'Dhruv Savaliya' }],
   creator: 'Dhruv Savaliya',
-  metadataBase: new URL('https://dhruvsavaliya.dev'),
+  metadataBase: new URL('https://devdhruv.vercel.app'),
   alternates: {
     canonical: '/',
   },
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://dhruvsavaliya.dev',
+    url: 'https://devdhruv.vercel.app',
     title: 'Dhruv Savaliya — Full Stack Developer',
     description:
       'Full-stack developer building digital products with code, AI & interaction.',
@@ -111,9 +111,9 @@ const jsonLd = {
   jobTitle: 'Full Stack Developer',
   description:
     'Full-stack developer specializing in Next.js, React, TypeScript, Node.js and AI-powered applications.',
-  url: 'https://dhruvsavaliya.dev',
+  url: 'https://devdhruv.vercel.app',
   sameAs: [
-    'https://github.com/dhruvsavaliya',
+    'https://github.com/Dhruv-Savaliya',
     'https://linkedin.com/in/dhruvsavaliya',
   ],
   knowsAbout: [

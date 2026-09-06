@@ -15,6 +15,20 @@ export type Section =
   | 'contact'
   | 'footer';
 
+export type CoreMorphTarget =
+  | 'hero'
+  | 'intro'
+  | 'bizdhan'
+  | 'clearclaim'
+  | 'receipt'
+  | 'about'
+  | 'technology'
+  | 'contact'
+  | 'footer'
+  | 'idle';
+
+export type TechCategory = 'FRONTEND' | 'BACKEND' | 'DATABASE' | 'AI' | 'WEBGL' | null;
+
 interface ExperienceStore {
   // Loading
   loadingProgress: number;
@@ -48,21 +62,21 @@ interface ExperienceStore {
   scrollProgress: number;
   setScrollProgress: (progress: number) => void;
 
-  // Core morph state
-  coreMorphTarget:
-    | 'idle'
-    | 'bizdhan'
-    | 'clearclaim'
-    | 'receipt'
-    | 'footer';
-  setCoreMorphTarget: (target: ExperienceStore['coreMorphTarget']) => void;
+  // Core Morph State
+  coreMorphTarget: CoreMorphTarget;
+  setCoreMorphTarget: (target: CoreMorphTarget) => void;
+
+  // Active Tech Category
+  activeTechCategory: TechCategory;
+  setActiveTechCategory: (cat: TechCategory) => void;
 }
 
 export const useExperienceStore = create<ExperienceStore>((set) => ({
   // Loading
   loadingProgress: 0,
   loadingComplete: false,
-  setLoadingProgress: (progress) => set({ loadingProgress: Math.min(100, Math.max(0, progress)) }),
+  setLoadingProgress: (progress) =>
+    set({ loadingProgress: Math.min(100, Math.max(0, progress)) }),
   setLoadingComplete: (loadingComplete) => set({ loadingComplete }),
 
   // Sound (OFF by default)
@@ -76,7 +90,7 @@ export const useExperienceStore = create<ExperienceStore>((set) => ({
   toggleMenu: () => set((state) => ({ menuOpen: !state.menuOpen })),
 
   // Sections
-  currentSection: 'preloader',
+  currentSection: 'hero',
   setCurrentSection: (currentSection) => set({ currentSection }),
 
   // Projects
@@ -92,6 +106,10 @@ export const useExperienceStore = create<ExperienceStore>((set) => ({
   setScrollProgress: (scrollProgress) => set({ scrollProgress }),
 
   // Core morph
-  coreMorphTarget: 'idle',
+  coreMorphTarget: 'hero',
   setCoreMorphTarget: (coreMorphTarget) => set({ coreMorphTarget }),
+
+  // Tech category
+  activeTechCategory: null,
+  setActiveTechCategory: (activeTechCategory) => set({ activeTechCategory }),
 }));

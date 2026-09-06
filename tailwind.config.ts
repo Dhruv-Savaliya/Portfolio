@@ -9,20 +9,30 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Core palette
-        'ds-bg': '#030303',
-        'ds-surface': '#0A0A0A',
-        'ds-surface-2': '#111111',
-        'ds-border': '#1A1A1A',
-        'ds-border-light': '#222222',
+        // Core Porcelain & Ink palette (Master Prompt Section 07)
+        'ds-bg': '#080B10',
+        'ds-surface': '#10151D',
+        'ds-surface-2': '#18202C',
+        'ds-border': 'rgba(244, 246, 250, 0.10)',
+        'ds-border-light': 'rgba(244, 246, 250, 0.16)',
         // Text
-        'ds-text': '#F0EDE6',
-        'ds-text-muted': '#555555',
-        'ds-text-dim': '#333333',
-        // Accent
-        'ds-lime': '#C8FF00',
-        'ds-cyan': '#00E5FF',
-        'ds-lime-dim': '#8BAA00',
+        'ds-text': '#F4F6FA',
+        'ds-text-muted': '#9AA4B2',
+        'ds-text-dim': '#4A5565',
+        // Light / Porcelain theme tokens
+        'ds-porcelain': '#F3F5F8',
+        'ds-porcelain-surface': '#E8ECF2',
+        'ds-ink': '#080B10',
+        'ds-ink-muted': '#4A5565',
+        'ds-porcelain-border': 'rgba(8, 11, 16, 0.12)',
+        // Signature Accents
+        'ds-blue': '#356DFF',
+        'ds-blue-highlight': '#7EA2FF',
+        'ds-blue-deep': '#1D4ED8',
+        // Secondary Signal (Restrained)
+        'ds-signal': '#B8FF5A',
+        'ds-lime': '#B8FF5A',
+        'ds-cyan': '#7EA2FF',
       },
       fontFamily: {
         'display': ['var(--font-space-grotesk)', 'sans-serif'],

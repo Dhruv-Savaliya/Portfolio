@@ -1,153 +1,116 @@
 'use client';
 
 import { useRef, useEffect, useState } from 'react';
+import { useExperienceStore } from '@/lib/store';
 
 export default function About() {
   const sectionRef = useRef<HTMLElement>(null);
-  const [visible, setVisible] = useState(false);
+  const [inView, setInView] = useState(false);
+  const setCoreMorphTarget = useExperienceStore((s) => s.setCoreMorphTarget);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setVisible(true); },
-      { threshold: 0.1 }
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          setCoreMorphTarget('about');
+        }
+      },
+      { threshold: 0.25 }
     );
+
     if (sectionRef.current) observer.observe(sectionRef.current);
     return () => observer.disconnect();
-  }, []);
+  }, [setCoreMorphTarget]);
 
   return (
     <section
       ref={sectionRef}
       id="about"
-      className="relative bg-ds-bg px-[5vw] py-[12vw] overflow-hidden"
+      className="relative px-[5vw] py-[20vh] border-t border-ds-border overflow-hidden transition-all duration-700 ease-expo-out"
+      style={{
+        opacity: inView ? 1 : 0.4,
+        transform: inView ? 'translateY(0)' : 'translateY(20px)',
+      }}
       aria-label="About Dhruv Savaliya"
     >
-      {/* Rule */}
-      <div
-        className="flex items-center gap-6 mb-[6vw]"
-        style={{ opacity: visible ? 1 : 0, transition: 'opacity 0.6s ease' }}
-      >
-        <span className="text-label-mono text-ds-lime">ABOUT</span>
+      {/* Telemetry Header */}
+      <div className="flex items-center gap-6 mb-12">
+        <span className="text-label-mono text-ds-blue-highlight text-xs font-mono tracking-widest">
+          04 // IDENTITY & PHILOSOPHY
+        </span>
         <div className="flex-1 h-px bg-ds-border" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20">
-        {/* Main statement — takes up 7 cols */}
-        <div className="lg:col-span-7">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-start">
+        {/* Left Column: Bold Editorial Typography */}
+        <div className="lg:col-span-8 space-y-8 select-none">
           <h2
-            className="font-display font-bold text-ds-text mb-10"
+            className="font-display font-bold text-ds-text tracking-tighter leading-none"
             style={{
-              fontSize: 'clamp(2rem, 5vw, 6rem)',
-              lineHeight: 0.92,
+              fontSize: 'clamp(2.6rem, 6vw, 7.5rem)',
+              lineHeight: 0.9,
               letterSpacing: '-0.04em',
-              opacity: visible ? 1 : 0,
-              transform: visible ? 'translateY(0)' : 'translateY(40px)',
-              transition: 'opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
           >
-            NOT JUST
+            <span>I&apos;M DHRUV.</span>
             <br />
-            <span style={{ color: '#C8FF00' }}>WRITING CODE.</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-ds-blue-highlight to-ds-blue">
+              FULL-STACK DEVELOPER
+            </span>
             <br />
-            SOLVING
+            <span>INTERESTED IN AI,</span>
             <br />
-            PROBLEMS.
+            <span className="text-ds-text-muted">
+              PRODUCTS &amp; INTERACTIVE WEB.
+            </span>
           </h2>
 
-          <div
-            className="space-y-6 max-w-xl"
-            style={{
-              opacity: visible ? 1 : 0,
-              transform: visible ? 'translateY(0)' : 'translateY(20px)',
-              transition: 'opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s',
-            }}
-          >
-            <p className="font-body text-ds-text-muted" style={{ fontSize: 'clamp(0.9rem, 1.3vw, 1.1rem)', lineHeight: 1.8 }}>
-              I&apos;m Dhruv — a full-stack developer from Surat, India, obsessed with
-              building web products that feel effortless to use. My work sits at
-              the intersection of engineering, design, and applied AI.
+          {/* Concise Supporting Copy */}
+          <div className="space-y-4 max-w-2xl text-ds-text-muted font-body text-base md:text-lg leading-relaxed pt-4">
+            <p>
+              Based in Surat, India, I build modern web applications where robust engineering meets
+              cinematic craft. My focus centers on full-stack architecture, high-performance interactive 3D,
+              and integrating artificial intelligence into functional software systems.
             </p>
-            <p className="font-body text-ds-text-muted" style={{ fontSize: 'clamp(0.9rem, 1.3vw, 1.1rem)', lineHeight: 1.8 }}>
-              I started with curiosity and ended up with a craft. Every project I
-              take on — whether it&apos;s a finance SaaS, a multi-tenant workflow
-              system, or an AI document pipeline — gets the same treatment:
-              thoughtful architecture, clean code, and interfaces that respect
-              the people who use them.
-            </p>
-            <p className="font-body text-ds-text-muted" style={{ fontSize: 'clamp(0.9rem, 1.3vw, 1.1rem)', lineHeight: 1.8 }}>
-              I&apos;m drawn to the hard parts — security, multi-tenancy, real-time
-              data, AI integration. The problems most developers avoid are the
-              ones I find most interesting.
+            <p>
+              Rather than assembling templates, I design from fundamental systems: data isolation, deterministic
+              APIs, clean accessibility, and visual pacing that respects the human on the other side of the glass.
             </p>
           </div>
         </div>
 
-        {/* Right sidebar — 5 cols */}
-        <div className="lg:col-span-5 space-y-8">
-          {/* Status */}
-          <div
-            className="p-6 rounded-2xl border border-ds-border bg-ds-surface"
-            style={{
-              opacity: visible ? 1 : 0,
-              transform: visible ? 'translateY(0)' : 'translateY(20px)',
-              transition: 'opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.3s, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.3s',
-            }}
-          >
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-2 h-2 rounded-full bg-ds-lime animate-pulse" />
-              <span className="text-label-mono text-ds-lime">AVAILABLE FOR WORK</span>
+        {/* Right Column: High-Level Signals */}
+        <div className="lg:col-span-4 space-y-6">
+          <div className="p-6 rounded-2xl border border-ds-border bg-ds-surface/60 backdrop-blur-md space-y-4">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-ds-signal animate-pulse" />
+              <span className="text-label-mono text-ds-signal text-xs font-semibold">
+                AVAILABLE FOR ROLES &amp; PROJECTS
+              </span>
             </div>
-            <p className="font-body text-ds-text-muted text-sm">
-              Open to full-stack development roles, freelance projects, and
-              AI-powered product builds.
+            <p className="font-mono text-xs text-ds-text-muted leading-relaxed">
+              Open to engineering challenges across Next.js, full-stack web products, and interactive interfaces.
             </p>
           </div>
 
-          {/* Focus areas */}
-          <div
-            style={{
-              opacity: visible ? 1 : 0,
-              transition: 'opacity 0.8s ease 0.4s',
-            }}
-          >
-            <p className="text-label-mono text-ds-text-muted mb-4">FOCUS AREAS</p>
-            <div className="space-y-3">
-              {[
-                'Modern web applications',
-                'SaaS product engineering',
-                'AI-powered features',
-                'Interactive experiences',
-                'Production systems',
-              ].map((area, _i) => (
-                <div key={area} className="flex items-center gap-3">
-                  <span style={{ color: '#C8FF00', fontSize: '0.6rem' }}>▸</span>
-                  <span className="font-body text-ds-text" style={{ fontSize: '0.9rem' }}>
-                    {area}
-                  </span>
-                </div>
-              ))}
+          <div className="p-6 rounded-2xl border border-ds-border bg-ds-surface/40 space-y-3 font-mono text-xs">
+            <div className="flex justify-between border-b border-ds-border/60 pb-2">
+              <span className="text-ds-text-dim">LOCATION</span>
+              <span className="text-ds-text">Surat, Gujarat, India</span>
             </div>
-          </div>
-
-          {/* Quick facts */}
-          <div
-            className="grid grid-cols-2 gap-4"
-            style={{
-              opacity: visible ? 1 : 0,
-              transition: 'opacity 0.8s ease 0.5s',
-            }}
-          >
-            {[
-              { label: 'LOCATION', value: 'Surat, India' },
-              { label: 'EDUCATION', value: 'BCA — SDJ College' },
-              { label: 'EXPERIENCE', value: '2+ Internships' },
-              { label: 'PROJECTS', value: '3 Major Builds' },
-            ].map((fact) => (
-              <div key={fact.label} className="p-4 rounded-xl border border-ds-border bg-ds-surface">
-                <p className="text-label-mono text-ds-text-muted mb-1">{fact.label}</p>
-                <p className="font-body text-ds-text text-sm font-medium">{fact.value}</p>
-              </div>
-            ))}
+            <div className="flex justify-between border-b border-ds-border/60 pb-2">
+              <span className="text-ds-text-dim">DEGREE</span>
+              <span className="text-ds-text">BCA (Graduated 2026)</span>
+            </div>
+            <div className="flex justify-between border-b border-ds-border/60 pb-2">
+              <span className="text-ds-text-dim">LANGUAGES</span>
+              <span className="text-ds-text">TypeScript, JavaScript, Python</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-ds-text-dim">FOCUS</span>
+              <span className="text-ds-blue-highlight">Next.js / AI / WebGL</span>
+            </div>
           </div>
         </div>
       </div>

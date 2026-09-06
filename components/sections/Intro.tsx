@@ -1,12 +1,9 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useExperienceStore } from '@/lib/store';
 
-// ============================================
-// EDITORIAL INTRO STATEMENT
-// ============================================
-
-const LINES = [
+const MANIFESTO_LINES = [
   'I LIKE TURNING',
   'COMPLICATED IDEAS',
   'INTO PRODUCTS',
@@ -15,90 +12,78 @@ const LINES = [
 
 export default function Intro() {
   const sectionRef = useRef<HTMLElement>(null);
-  const linesRef = useRef<HTMLDivElement[]>([]);
+  const [inView, setInView] = useState(false);
+  const setCoreMorphTarget = useExperienceStore((s) => s.setCoreMorphTarget);
 
   useEffect(() => {
-    // Intersection-based reveal
     const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const idx = linesRef.current.indexOf(entry.target as HTMLDivElement);
-            if (idx !== -1) {
-              setTimeout(() => {
-                (entry.target as HTMLDivElement).style.opacity = '1';
-                (entry.target as HTMLDivElement).style.transform = 'translateY(0)';
-              }, idx * 120);
-            }
-          }
-        });
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          setCoreMorphTarget('intro');
+        }
       },
-      { threshold: 0.1, rootMargin: '0px 0px -10% 0px' }
+      { threshold: 0.3 }
     );
 
-    linesRef.current.forEach((line) => {
-      if (line) observer.observe(line);
-    });
-
+    if (sectionRef.current) observer.observe(sectionRef.current);
     return () => observer.disconnect();
-  }, []);
+  }, [setCoreMorphTarget]);
 
   return (
     <section
       ref={sectionRef}
       id="intro"
-      className="relative bg-ds-bg px-[5vw] py-[15vw] overflow-hidden"
-      aria-label="Introduction"
+      className="relative px-[5vw] py-[22vh] overflow-hidden flex flex-col justify-center"
+      style={{ minHeight: '90svh' }}
+      aria-label="Manifesto"
     >
-      {/* Top rule with label */}
-      <div className="flex items-center gap-6 mb-[8vw]">
-        <span className="text-label-mono text-ds-lime">MANIFESTO</span>
+      {/* Top Telemetry Header */}
+      <div className="flex items-center gap-6 mb-12">
+        <span className="text-label-mono text-ds-blue-highlight text-xs tracking-widest font-mono">
+          01 // MANIFESTO
+        </span>
         <div className="flex-1 h-px bg-ds-border" />
       </div>
 
-      {/* Editorial lines */}
-      <div className="space-y-1 md:space-y-2">
-        {LINES.map((line, i) => (
-          <div
-            key={i}
-            ref={(el) => { if (el) linesRef.current[i] = el; }}
-            style={{
-              opacity: 0,
-              transform: 'translateY(60px)',
-              transition: `opacity 1s cubic-bezier(0.16, 1, 0.3, 1), transform 1s cubic-bezier(0.16, 1, 0.3, 1)`,
-              willChange: 'opacity, transform',
-            }}
-          >
-            <p
-              className="font-display font-bold text-ds-text"
-              style={{
-                fontSize: 'clamp(2.5rem, 7vw, 9rem)',
-                lineHeight: 0.9,
-                letterSpacing: '-0.04em',
-                color: i === LINES.length - 1 ? '#C8FF00' : '#F0EDE6',
-              }}
-            >
-              {line}
-            </p>
-          </div>
-        ))}
+      {/* Editorial Giant Manifesto Lines with Masking Reveal */}
+      <div className="space-y-2 md:space-y-3 select-none">
+        {MANIFESTO_LINES.map((line, idx) => {
+          const isHighlight = idx === MANIFESTO_LINES.length - 1;
+          return (
+            <div key={line} className="overflow-hidden">
+              <p
+                className={`font-display font-bold tracking-tighter transition-all duration-1000 ease-expo-out ${
+                  isHighlight
+                    ? 'text-transparent bg-clip-text bg-gradient-to-r from-ds-blue-highlight to-ds-blue'
+                    : 'text-ds-text'
+                }`}
+                style={{
+                  fontSize: 'clamp(2.5rem, 7.5vw, 9.5rem)',
+                  lineHeight: 0.88,
+                  letterSpacing: '-0.04em',
+                  transform: inView ? 'translateY(0)' : 'translateY(110%)',
+                  opacity: inView ? 1 : 0,
+                  transitionDelay: `${idx * 120}ms`,
+                }}
+              >
+                {line}
+              </p>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Bottom statement */}
-      <div className="mt-[8vw] flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-        <p
-          className="font-body text-ds-text-muted max-w-md"
-          style={{ fontSize: 'clamp(0.875rem, 1.2vw, 1.1rem)', lineHeight: 1.7 }}
-        >
-          Every line of code serves a purpose. Every interaction is intentional.
-          I build for humans, powered by modern technology.
+      {/* Bottom Editorial Footnote */}
+      <div className="mt-16 pt-8 border-t border-ds-border flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <p className="font-body text-ds-text-muted text-sm md:text-base max-w-lg leading-relaxed">
+          Full-stack systems engineered with intention. From database schema
+          to interactive canvas, every layer is designed to solve complex challenges
+          elegantly.
         </p>
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-px bg-ds-border" />
-          <span className="text-label-mono text-ds-text-muted">
-            EST. 2022
-          </span>
-        </div>
+        <span className="text-label-mono text-ds-text-dim text-xs font-mono">
+          SURAT, GUJARAT // INDIA
+        </span>
       </div>
     </section>
   );

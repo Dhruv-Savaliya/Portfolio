@@ -1,321 +1,194 @@
 'use client';
 
-import React, { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useExperienceStore } from '@/lib/store';
 
-// ============================================
-// CLEARCLAIM PROJECT CHAPTER
-// ============================================
-
-const TECH = ['Next.js', 'TypeScript', 'MongoDB', 'JWT', 'Better Auth', 'RBAC', 'Zod'];
-
-// Node in the network diagram
-function NetworkNode({
-  label,
-  sub,
-  color,
-  x,
-  y,
-  visible,
-  delay,
-}: {
-  label: string;
-  sub?: string;
-  color: string;
-  x: string;
-  y: string;
-  visible: boolean;
-  delay: number;
-}) {
-  return (
-    <div
-      className="absolute flex flex-col items-center gap-1"
-      style={{
-        left: x,
-        top: y,
-        transform: 'translate(-50%, -50%)',
-        opacity: visible ? 1 : 0,
-        scale: visible ? '1' : '0.6',
-        transition: `opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s, scale 0.6s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`,
-      }}
-    >
-      <div
-        className="w-10 h-10 md:w-14 md:h-14 rounded-xl flex items-center justify-center border"
-        style={{
-          borderColor: color,
-          backgroundColor: `${color}15`,
-          boxShadow: visible ? `0 0 20px ${color}30` : 'none',
-          transition: `box-shadow 0.6s ease ${delay + 0.2}s`,
-        }}
-      >
-        <span
-          className="font-mono text-center"
-          style={{ fontSize: '0.55rem', color, letterSpacing: '0.05em' }}
-        >
-          {label}
-        </span>
-      </div>
-      {sub && (
-        <span className="text-label-mono text-ds-text-muted" style={{ fontSize: '0.5rem' }}>
-          {sub}
-        </span>
-      )}
-    </div>
-  );
-}
-
-// Security flow badge
-function FlowBadge({
-  step,
-  label,
-  active,
-  delay,
-}: {
-  step: string;
-  label: string;
-  active: boolean;
-  delay: number;
-}) {
-  return (
-    <div
-      className="flex items-center gap-3"
-      style={{
-        opacity: active ? 1 : 0.3,
-        transform: active ? 'translateX(0)' : 'translateX(-10px)',
-        transition: `opacity 0.6s ease ${delay}s, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`,
-      }}
-    >
-      <div
-        className="w-6 h-6 rounded-full border flex items-center justify-center flex-shrink-0"
-        style={{ borderColor: active ? '#C8FF00' : '#1A1A1A', backgroundColor: active ? '#C8FF00' : 'transparent' }}
-      >
-        <span className="text-ds-bg font-mono font-bold" style={{ fontSize: '0.55rem' }}>
-          {step}
-        </span>
-      </div>
-      <span className="text-label-mono text-ds-text" style={{ fontSize: '0.65rem' }}>
-        {label}
-      </span>
-    </div>
-  );
-}
+const CLEARCLAIM_STACK = [
+  'Next.js 15',
+  'TypeScript',
+  'MongoDB',
+  'JWT Authentication',
+  'RBAC Security',
+  'Tailwind CSS',
+  'Zod Validation',
+];
 
 export default function ClearClaim() {
   const sectionRef = useRef<HTMLElement>(null);
-  const [visible, setVisible] = useState(false);
+  const [inView, setInView] = useState(false);
+  const setCoreMorphTarget = useExperienceStore((s) => s.setCoreMorphTarget);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setVisible(true); },
-      { threshold: 0.12 }
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          setCoreMorphTarget('clearclaim');
+        }
+      },
+      { threshold: 0.25 }
     );
+
     if (sectionRef.current) observer.observe(sectionRef.current);
     return () => observer.disconnect();
-  }, []);
+  }, [setCoreMorphTarget]);
 
   return (
     <section
       ref={sectionRef}
       id="clearclaim"
-      className="relative bg-ds-surface px-[5vw] py-[12vw] overflow-hidden"
-      aria-label="ClearClaim project"
+      className="relative px-[5vw] py-[18vh] border-t border-ds-border overflow-hidden transition-all duration-700 ease-expo-out"
+      style={{
+        opacity: inView ? 1 : 0.4,
+        transform: inView ? 'translateY(0)' : 'translateY(20px)',
+      }}
+      aria-label="ClearClaim — Multi-Tenant Expense Approval Workflow System"
     >
-      {/* Background grid */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage:
-            'linear-gradient(rgba(26,26,26,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(26,26,26,0.5) 1px, transparent 1px)',
-          backgroundSize: '60px 60px',
-          opacity: 0.4,
-        }}
-      />
-
-      {/* Section rule */}
-      <div className="flex items-center gap-6 mb-[6vw] relative z-10">
-        <span className="text-label-mono text-ds-cyan">02</span>
-        <div className="flex-1 h-px bg-ds-border" />
-        <span className="text-label-mono text-ds-text-muted">SELECTED WORK</span>
+      {/* Chapter Number & Telemetry Header */}
+      <div className="flex items-center justify-between mb-10">
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-xs text-ds-blue-highlight">02 // PROJECT CHAPTER</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-ds-blue animate-pulse" />
+        </div>
+        <span className="text-label-mono text-ds-text-dim text-[11px]">
+          MULTI-TENANT EXPENSE WORKFLOW & SECURITY ARCHITECTURE
+        </span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 relative z-10">
-        {/* Left: Visual */}
-        <div className="order-2 lg:order-1">
-          {/* Security Audit counter */}
-          <div
-            className="mb-8 p-6 rounded-2xl border border-ds-border bg-ds-surface-2"
-            style={{
-              opacity: visible ? 1 : 0,
-              transition: 'opacity 0.8s ease 0.1s',
-            }}
-          >
-            <p className="text-label-mono text-ds-text-muted mb-3">SECURITY AUDIT RESULT</p>
-            <div className="flex items-end gap-4 mb-4">
-              <span
-                className="font-display font-bold"
-                style={{
-                  fontSize: 'clamp(3rem, 6vw, 5rem)',
-                  lineHeight: 1,
-                  letterSpacing: '-0.04em',
-                  color: '#FF6B6B',
-                }}
-              >
-                35
-              </span>
-              <span className="text-label-mono text-ds-text-muted mb-2">
-                ISSUES IDENTIFIED
-              </span>
-            </div>
-
-            {/* Flow */}
-            <div className="space-y-3">
-              <FlowBadge step="1" label="SECURITY AUDIT" active={visible} delay={0.3} />
-              <div className="ml-3 w-px h-4 bg-ds-border" />
-              <FlowBadge step="2" label="REMEDIATION" active={visible} delay={0.5} />
-              <div className="ml-3 w-px h-4 bg-ds-border" />
-              <FlowBadge step="3" label="SECURE SYSTEM ✓" active={visible} delay={0.7} />
-            </div>
-          </div>
-
-          {/* Network diagram */}
-          <div
-            className="relative w-full rounded-2xl border border-ds-border bg-ds-surface-2 overflow-hidden"
-            style={{
-              height: '260px',
-              opacity: visible ? 1 : 0,
-              transition: 'opacity 0.8s ease 0.2s',
-            }}
-          >
-            {/* SVG connection lines */}
-            <svg className="absolute inset-0 w-full h-full" style={{ zIndex: 0 }}>
-              {visible && (
-                <>
-                  <line x1="50%" y1="50%" x2="20%" y2="25%" stroke="#C8FF0030" strokeWidth="1" strokeDasharray="4 4">
-                    <animate attributeName="stroke-dashoffset" from="0" to="-8" dur="1s" repeatCount="indefinite" />
-                  </line>
-                  <line x1="50%" y1="50%" x2="80%" y2="25%" stroke="#C8FF0030" strokeWidth="1" strokeDasharray="4 4">
-                    <animate attributeName="stroke-dashoffset" from="0" to="-8" dur="1.2s" repeatCount="indefinite" />
-                  </line>
-                  <line x1="50%" y1="50%" x2="15%" y2="75%" stroke="#00E5FF30" strokeWidth="1" strokeDasharray="4 4">
-                    <animate attributeName="stroke-dashoffset" from="0" to="-8" dur="0.9s" repeatCount="indefinite" />
-                  </line>
-                  <line x1="50%" y1="50%" x2="85%" y2="75%" stroke="#00E5FF30" strokeWidth="1" strokeDasharray="4 4">
-                    <animate attributeName="stroke-dashoffset" from="0" to="-8" dur="1.1s" repeatCount="indefinite" />
-                  </line>
-                  <line x1="50%" y1="50%" x2="50%" y2="15%" stroke="#C8FF0030" strokeWidth="1" strokeDasharray="4 4">
-                    <animate attributeName="stroke-dashoffset" from="0" to="-8" dur="1.3s" repeatCount="indefinite" />
-                  </line>
-                </>
-              )}
-            </svg>
-
-            {/* Nodes */}
-            <NetworkNode label="API" sub="GATEWAY" color="#C8FF00" x="50%" y="50%" visible={visible} delay={0.2} />
-            <NetworkNode label="TENANT\nA" color="#00E5FF" x="20%" y="25%" visible={visible} delay={0.3} />
-            <NetworkNode label="TENANT\nB" color="#00E5FF" x="80%" y="25%" visible={visible} delay={0.4} />
-            <NetworkNode label="ADMIN" color="#C8FF00" x="50%" y="15%" visible={visible} delay={0.5} />
-            <NetworkNode label="DB\nA" sub="ISOLATED" color="#a29bfe" x="15%" y="75%" visible={visible} delay={0.6} />
-            <NetworkNode label="DB\nB" sub="ISOLATED" color="#a29bfe" x="85%" y="75%" visible={visible} delay={0.7} />
-          </div>
-
-          {/* RBAC badges */}
-          <div className="flex flex-wrap gap-2 mt-4">
-            {['RBAC', 'JWT AUTH', 'MIDDLEWARE', 'TENANT ISOLATION', 'PROTECTED ROUTES'].map((badge, i) => (
-              <span
-                key={badge}
-                className="text-label-mono border border-ds-cyan/30 text-ds-cyan px-3 py-1 rounded-full"
-                style={{
-                  fontSize: '0.6rem',
-                  opacity: visible ? 1 : 0,
-                  transition: `opacity 0.5s ease ${0.4 + i * 0.08}s`,
-                }}
-              >
-                {badge}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* Right: Copy */}
-        <div className="order-1 lg:order-2 flex flex-col justify-between">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
+        {/* Left Column: Technical Narrative & Security Audit */}
+        <div className="lg:col-span-6 space-y-8">
           <div>
-            <div
+            <h2
+              className="font-display font-bold text-ds-text tracking-tighter"
               style={{
-                opacity: visible ? 1 : 0,
-                transform: visible ? 'translateY(0)' : 'translateY(30px)',
-                transition: 'opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
+                fontSize: 'clamp(3rem, 7vw, 7.5rem)',
+                lineHeight: 0.88,
+                letterSpacing: '-0.04em',
               }}
             >
-              <p className="text-label-mono text-ds-cyan mb-4">MULTI-TENANT EXPENSE WORKFLOW</p>
-              <h2
-                className="font-display font-bold text-ds-text"
-                style={{
-                  fontSize: 'clamp(2.5rem, 7vw, 8rem)',
-                  lineHeight: 0.88,
-                  letterSpacing: '-0.04em',
-                  marginBottom: '2rem',
-                }}
-              >
-                CLEAR
-                <span style={{ color: '#00E5FF' }}>CLAIM</span>
-              </h2>
-            </div>
-
-            <p
-              className="font-body text-ds-text-muted mb-8"
-              style={{
-                fontSize: 'clamp(0.9rem, 1.3vw, 1.1rem)',
-                lineHeight: 1.7,
-                maxWidth: '42ch',
-                opacity: visible ? 1 : 0,
-                transform: visible ? 'translateY(0)' : 'translateY(20px)',
-                transition: 'opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s',
-              }}
-            >
-              A multi-tenant expense approval workflow system with role-based access control,
-              database isolation, and a complete security remediation from 35 identified
-              vulnerabilities to a production-ready, secure system.
+              CLEARCLAIM
+            </h2>
+            <p className="font-mono text-sm text-ds-blue-highlight mt-2 uppercase tracking-widest">
+              Multi-Tenant Expense Workflow System
             </p>
+          </div>
 
-            <div className="flex flex-wrap gap-2 mb-10">
-              {TECH.map((t, i) => (
+          <div className="space-y-4 text-ds-text-muted font-body text-sm md:text-base leading-relaxed">
+            <p>
+              BCA capstone project co-developed to provide enterprise organizations with strictly
+              isolated multi-tenant expense management and customizable multi-level approval hierarchies.
+            </p>
+            <p>
+              Engineered robust Role-Based Access Control (RBAC) categorizing permissions across Employees,
+              Managers, and Administrators with cryptographically signed JWT session middleware and strict tenant database scoping.
+            </p>
+          </div>
+
+          {/* Code Audit & Remediation Milestone */}
+          <div className="p-6 rounded-2xl border border-ds-border bg-ds-surface/60 backdrop-blur-md space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-label-mono text-ds-signal text-xs font-semibold">
+                SECURITY CODE AUDIT MILESTONE
+              </span>
+              <span className="font-mono text-xs text-ds-text-muted">35 ISSUES REMEDIATED</span>
+            </div>
+            <p className="text-xs text-ds-text font-mono leading-relaxed">
+              Identified critical middleware misconfiguration allowing route access bypass; architected complete
+              session-validation middleware barrier with immutable audit trails.
+            </p>
+          </div>
+
+          {/* Stack Pills */}
+          <div>
+            <p className="text-label-mono text-ds-text-dim text-xs mb-3">CORE SPECIFICATION</p>
+            <div className="flex flex-wrap gap-2">
+              {CLEARCLAIM_STACK.map((tech) => (
                 <span
-                  key={t}
-                  className="tech-tag"
-                  style={{
-                    opacity: visible ? 1 : 0,
-                    transition: `opacity 0.5s ease ${0.2 + i * 0.06}s`,
-                  }}
+                  key={tech}
+                  className="px-3 py-1 rounded-full text-xs font-mono border border-ds-border bg-ds-surface/40 text-ds-text-muted"
                 >
-                  {t}
+                  {tech}
                 </span>
               ))}
             </div>
           </div>
 
-          {/* CTAs */}
-          <div
-            className="flex items-center gap-6"
-            style={{
-              opacity: visible ? 1 : 0,
-              transform: visible ? 'translateY(0)' : 'translateY(20px)',
-              transition: 'opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.35s, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.35s',
-            }}
-          >
+          {/* Links */}
+          <div className="flex items-center gap-6 pt-4">
             <Link
-              href="#"
-              className="flex items-center gap-2 px-6 py-3 border border-ds-cyan text-ds-cyan font-display font-bold text-sm tracking-wide hover:bg-ds-cyan hover:text-ds-bg transition-all duration-300 cursor-none rounded-full"
+              href="/work/clearclaim"
+              className="inline-flex items-center gap-2 text-xs font-mono text-ds-blue-highlight hover:underline tracking-wider"
             >
-              LIVE DEMO ↗
+              VIEW CASE STUDY ARCHITECTURE ↗
             </Link>
-            <Link
-              href="https://github.com/dhruvsavaliya"
+            <a
+              href="https://github.com/Dhruv-Savaliya/Portfolio.git"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 text-label-mono text-ds-text-muted hover:text-ds-cyan transition-colors duration-300 cursor-none"
+              className="inline-flex items-center gap-2 text-xs font-mono text-ds-text-muted hover:text-ds-text tracking-wider"
             >
-              GITHUB →
-            </Link>
+              GITHUB ↗
+            </a>
+          </div>
+        </div>
+
+        {/* Right Column: Multi-Tenant Hierarchy Architecture Visual */}
+        <div className="lg:col-span-6 space-y-4">
+          <div className="p-6 md:p-8 rounded-2xl border border-ds-border bg-ds-surface/80 backdrop-blur-md shadow-2xl space-y-6">
+            <div className="flex items-center justify-between pb-4 border-b border-ds-border">
+              <span className="font-mono text-xs text-ds-text">TENANT_ISOLATION_MODEL</span>
+              <span className="font-mono text-[11px] text-ds-signal">RBAC_ENFORCED</span>
+            </div>
+
+            {/* Tenant A Box */}
+            <div className="p-4 rounded-xl border border-ds-blue/40 bg-ds-blue/5 space-y-3">
+              <div className="flex items-center justify-between font-mono text-xs">
+                <span className="text-ds-blue-highlight font-bold">TENANT CLUSTER // ORG_ALPHA</span>
+                <span className="text-[10px] text-ds-text-dim">DB_KEY: 0x9F41</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-[11px] font-mono text-center">
+                <div className="p-2 rounded bg-ds-bg/60 border border-ds-border/40 text-ds-text-muted">
+                  EMPLOYEE
+                </div>
+                <div className="p-2 rounded bg-ds-bg/60 border border-ds-border/40 text-ds-text-muted">
+                  MANAGER
+                </div>
+                <div className="p-2 rounded bg-ds-bg/60 border border-ds-blue/40 text-ds-blue-highlight font-semibold">
+                  ADMIN
+                </div>
+              </div>
+            </div>
+
+            {/* Security Middleware Barrier Line */}
+            <div className="relative py-2 flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-dashed border-ds-border" />
+              </div>
+              <span className="relative px-3 py-1 rounded-full bg-ds-surface border border-ds-border text-[10px] font-mono text-ds-text-dim">
+                JWT MIDDLEWARE // ZERO-LEAK BARRIER
+              </span>
+            </div>
+
+            {/* Tenant B Box */}
+            <div className="p-4 rounded-xl border border-ds-border bg-ds-bg/40 space-y-3">
+              <div className="flex items-center justify-between font-mono text-xs">
+                <span className="text-ds-text font-bold">TENANT CLUSTER // ORG_BETA</span>
+                <span className="text-[10px] text-ds-text-dim">DB_KEY: 0xE82B</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-[11px] font-mono text-center">
+                <div className="p-2 rounded bg-ds-surface/60 border border-ds-border/40 text-ds-text-muted">
+                  EMPLOYEE
+                </div>
+                <div className="p-2 rounded bg-ds-surface/60 border border-ds-border/40 text-ds-text-muted">
+                  MANAGER
+                </div>
+                <div className="p-2 rounded bg-ds-surface/60 border border-ds-border/40 text-ds-text-muted">
+                  ADMIN
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -1,145 +1,128 @@
 'use client';
 
 import { useRef, useEffect, useState } from 'react';
+import { useExperienceStore } from '@/lib/store';
+import { useSound } from '@/hooks/useSound';
 
 export default function Contact() {
   const sectionRef = useRef<HTMLElement>(null);
-  const [visible, setVisible] = useState(false);
-  const [hovering, setHovering] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const setCoreMorphTarget = useExperienceStore((s) => s.setCoreMorphTarget);
+  const { play } = useSound();
 
   useEffect(() => {
     const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setVisible(true); },
-      { threshold: 0.1 }
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setCoreMorphTarget('contact');
+        }
+      },
+      { threshold: 0.3 }
     );
+
     if (sectionRef.current) observer.observe(sectionRef.current);
     return () => observer.disconnect();
-  }, []);
+  }, [setCoreMorphTarget]);
 
-  const links = [
-    { label: 'EMAIL', href: 'mailto:dhruvsavaliya001@gmail.com', value: 'dhruvsavaliya001@gmail.com' },
-    { label: 'LINKEDIN', href: 'https://linkedin.com/in/dhruvsavaliya', value: 'linkedin.com/in/dhruvsavaliya' },
-    { label: 'GITHUB', href: 'https://github.com/dhruvsavaliya', value: 'github.com/dhruvsavaliya' },
-  ];
+  const handleCopy = () => {
+    navigator.clipboard.writeText('dhruvsavaliya075@gmail.com');
+    setCopied(true);
+    play('click');
+    setTimeout(() => setCopied(false), 2500);
+  };
 
   return (
     <section
       ref={sectionRef}
       id="contact"
-      className="relative bg-ds-surface px-[5vw] py-[15vw] overflow-hidden"
+      className="relative px-[5vw] py-[22vh] border-t border-ds-border overflow-hidden select-none"
       aria-label="Contact Dhruv Savaliya"
     >
-      {/* Background glow */}
-      <div
-        className="absolute bottom-0 left-1/2 -translate-x-1/2 pointer-events-none"
-        style={{
-          width: '60vw',
-          height: '40vw',
-          background: 'radial-gradient(ellipse, rgba(200,255,0,0.05) 0%, transparent 70%)',
-          filter: 'blur(40px)',
-        }}
-      />
-
-      {/* Rule */}
-      <div
-        className="flex items-center gap-6 mb-[8vw]"
-        style={{ opacity: visible ? 1 : 0, transition: 'opacity 0.6s ease' }}
-      >
-        <span className="text-label-mono text-ds-lime">CONTACT</span>
+      {/* Telemetry Header */}
+      <div className="flex items-center gap-6 mb-14">
+        <span className="text-label-mono text-ds-blue-highlight text-xs font-mono tracking-widest">
+          07 // THE CLIMAX
+        </span>
         <div className="flex-1 h-px bg-ds-border" />
       </div>
 
-      {/* Headline */}
-      <h2
-        className="font-display font-bold text-ds-text mb-[5vw]"
-        style={{
-          fontSize: 'clamp(3rem, 10vw, 14rem)',
-          lineHeight: 0.85,
-          letterSpacing: '-0.05em',
-          opacity: visible ? 1 : 0,
-          transform: visible ? 'translateY(0)' : 'translateY(60px)',
-          transition: 'opacity 1s cubic-bezier(0.16, 1, 0.3, 1), transform 1s cubic-bezier(0.16, 1, 0.3, 1)',
-        }}
-      >
-        HAVE AN
-        <br />
-        IDEA WORTH
-        <br />
-        <span style={{ color: '#C8FF00' }}>BUILDING?</span>
-      </h2>
-
-      {/* Magnetic CTA */}
-      <div className="mb-[6vw]">
-        <a
-          href="mailto:dhruvsavaliya001@gmail.com"
-          className="inline-flex items-center gap-4 group cursor-none"
-          onMouseEnter={() => setHovering(true)}
-          onMouseLeave={() => setHovering(false)}
-          aria-label="Send email to Dhruv Savaliya"
+      {/* Massive Climax Headline */}
+      <div className="mb-14">
+        <h2
+          className="font-display font-bold text-ds-text tracking-tighter"
           style={{
-            opacity: visible ? 1 : 0,
-            transition: 'opacity 0.8s ease 0.3s',
+            fontSize: 'clamp(3rem, 11vw, 15rem)',
+            lineHeight: 0.85,
+            letterSpacing: '-0.05em',
           }}
         >
-          <div
-            className="flex items-center gap-4 px-8 py-5 rounded-full border transition-all duration-500"
-            style={{
-              borderColor: hovering ? '#C8FF00' : '#1A1A1A',
-              backgroundColor: hovering ? '#C8FF00' : 'transparent',
-              transform: hovering ? 'scale(1.04)' : 'scale(1)',
-            }}
-          >
-            <span
-              className="font-display font-bold transition-colors duration-300"
-              style={{
-                fontSize: 'clamp(1.2rem, 2.5vw, 2.5rem)',
-                letterSpacing: '-0.03em',
-                color: hovering ? '#030303' : '#F0EDE6',
-              }}
-            >
-              LET&apos;S TALK
-            </span>
-            <span
-              className="font-display font-bold transition-all duration-300"
-              style={{
-                fontSize: 'clamp(1.2rem, 2.5vw, 2.5rem)',
-                color: hovering ? '#030303' : '#C8FF00',
-                transform: hovering ? 'translate(6px, -6px)' : 'none',
-              }}
-            >
-              ↗
-            </span>
-          </div>
-        </a>
+          <span>HAVE AN IDEA</span>
+          <br />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-ds-blue-highlight via-ds-blue to-ds-signal">
+            WORTH BUILDING?
+          </span>
+        </h2>
       </div>
 
-      {/* Contact links */}
-      <div
-        className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 border-t border-ds-border pt-[4vw]"
-        style={{ opacity: visible ? 1 : 0, transition: 'opacity 0.8s ease 0.5s' }}
-      >
-        {links.map((link, i) => (
+      {/* Magnetic Primary Action CTA */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 mb-16">
+        <a
+          href="mailto:dhruvsavaliya075@gmail.com"
+          onClick={() => play('click')}
+          className="group inline-flex items-center gap-4 px-8 md:px-10 py-5 rounded-full border border-ds-blue bg-ds-blue text-white hover:bg-ds-blue-highlight transition-all duration-300 font-display font-bold text-xl md:text-2xl tracking-tight shadow-xl shadow-ds-blue/20 cursor-none"
+          aria-label="Initiate direct email to Dhruv Savaliya"
+        >
+          <span>LET&apos;S TALK</span>
+          <span className="font-mono text-lg group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform duration-300">
+            ↗
+          </span>
+        </a>
+
+        {/* Quick Copy Action */}
+        <button
+          onClick={handleCopy}
+          className="inline-flex items-center gap-3 px-6 py-5 rounded-full border border-ds-border bg-ds-surface/60 hover:border-ds-blue-highlight/50 transition-colors text-xs font-mono text-ds-text-muted hover:text-ds-text cursor-none"
+          aria-label="Copy email address to clipboard"
+        >
+          <span className="text-ds-blue-highlight">
+            {copied ? '✓ COPIED TO CLIPBOARD' : 'COPY: dhruvsavaliya075@gmail.com'}
+          </span>
+        </button>
+      </div>
+
+      {/* Direct Channel Telemetry */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-10 border-t border-ds-border">
+        <div>
+          <p className="text-label-mono text-ds-text-dim text-xs mb-1">DIRECT INBOX</p>
           <a
-            key={link.label}
-            href={link.href}
-            target={link.href.startsWith('mailto') ? undefined : '_blank'}
-            rel={link.href.startsWith('mailto') ? undefined : 'noopener noreferrer'}
-            className="group flex flex-col gap-1 cursor-none"
-            style={{
-              opacity: visible ? 1 : 0,
-              transform: visible ? 'translateY(0)' : 'translateY(20px)',
-              transition: `opacity 0.6s ease ${0.5 + i * 0.1}s, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1) ${0.5 + i * 0.1}s`,
-            }}
+            href="mailto:dhruvsavaliya075@gmail.com"
+            className="font-mono text-sm text-ds-text hover:text-ds-blue-highlight transition-colors cursor-none"
           >
-            <p className="text-label-mono text-ds-text-muted">{link.label}</p>
-            <p
-              className="font-body text-ds-text group-hover:text-ds-lime transition-colors duration-300"
-              style={{ fontSize: 'clamp(0.75rem, 1.2vw, 1rem)', wordBreak: 'break-all' }}
-            >
-              {link.value}
-            </p>
+            dhruvsavaliya075@gmail.com
           </a>
-        ))}
+        </div>
+        <div>
+          <p className="text-label-mono text-ds-text-dim text-xs mb-1">GITHUB REPOSITORY</p>
+          <a
+            href="https://github.com/Dhruv-Savaliya"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-mono text-sm text-ds-text hover:text-ds-blue-highlight transition-colors cursor-none"
+          >
+            github.com/Dhruv-Savaliya ↗
+          </a>
+        </div>
+        <div>
+          <p className="text-label-mono text-ds-text-dim text-xs mb-1">PROFESSIONAL NETWORK</p>
+          <a
+            href="https://linkedin.com/in/dhruvsavaliya"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-mono text-sm text-ds-text hover:text-ds-blue-highlight transition-colors cursor-none"
+          >
+            linkedin.com/in/dhruvsavaliya ↗
+          </a>
+        </div>
       </div>
     </section>
   );

@@ -6,14 +6,16 @@ export default function CustomCursor() {
   const dotRef = useRef<HTMLDivElement>(null);
   const ringRef = useRef<HTMLDivElement>(null);
 
-  // Position tracking with lerping for smooth ring
   const mouse = useRef({ x: -100, y: -100 });
   const ring = useRef({ x: -100, y: -100 });
   const rafId = useRef<number>(0);
 
   useEffect(() => {
-    // Hide on mobile
-    if (window.innerWidth < 768) return;
+    // Disable on touch devices or small screens
+    if (typeof window === 'undefined') return;
+    if (window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768) {
+      return;
+    }
 
     const updateMouse = (e: MouseEvent) => {
       mouse.current.x = e.clientX;
@@ -25,9 +27,8 @@ export default function CustomCursor() {
     };
 
     const animate = () => {
-      // Lerp ring position
-      ring.current.x += (mouse.current.x - ring.current.x) * 0.12;
-      ring.current.y += (mouse.current.y - ring.current.y) * 0.12;
+      ring.current.x += (mouse.current.x - ring.current.x) * 0.15;
+      ring.current.y += (mouse.current.y - ring.current.y) * 0.15;
 
       if (ringRef.current) {
         ringRef.current.style.transform = `translate(${ring.current.x}px, ${ring.current.y}px) translate(-50%, -50%)`;
@@ -35,30 +36,35 @@ export default function CustomCursor() {
       rafId.current = requestAnimationFrame(animate);
     };
 
-    const handleHoverIn = () => {
-      ringRef.current?.classList.add('is-hovering');
+    // Event delegation for interactive elements
+    const handleMouseOver = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target?.closest('a, button, [role="button"], input, select, textarea, [tabindex="0"]')
+      ) {
+        ringRef.current?.classList.add('is-hovering');
+      }
     };
-    const handleHoverOut = () => {
-      ringRef.current?.classList.remove('is-hovering');
+
+    const handleMouseOut = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target?.closest('a, button, [role="button"], input, select, textarea, [tabindex="0"]')
+      ) {
+        ringRef.current?.classList.remove('is-hovering');
+      }
     };
 
     window.addEventListener('mousemove', updateMouse, { passive: true });
+    document.addEventListener('mouseover', handleMouseOver, { passive: true });
+    document.addEventListener('mouseout', handleMouseOut, { passive: true });
     rafId.current = requestAnimationFrame(animate);
-
-    // Add hover detection to interactive elements
-    const els = document.querySelectorAll('a, button, [role="button"], .cursor-none');
-    els.forEach((el) => {
-      el.addEventListener('mouseenter', handleHoverIn);
-      el.addEventListener('mouseleave', handleHoverOut);
-    });
 
     return () => {
       window.removeEventListener('mousemove', updateMouse);
+      document.removeEventListener('mouseover', handleMouseOver);
+      document.removeEventListener('mouseout', handleMouseOut);
       cancelAnimationFrame(rafId.current);
-      els.forEach((el) => {
-        el.removeEventListener('mouseenter', handleHoverIn);
-        el.removeEventListener('mouseleave', handleHoverOut);
-      });
     };
   }, []);
 

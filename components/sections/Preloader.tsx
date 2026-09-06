@@ -1,66 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useExperienceStore } from '@/lib/store';
 import { useSound } from '@/hooks/useSound';
 
 // ============================================
-// ASSET LOADING TASKS
-// ============================================
-const LOADING_TASKS: Array<{ label: string; weight: number; fn: () => Promise<void> }> = [
-  {
-    label: 'FONTS',
-    weight: 15,
-    fn: async () => {
-      if (typeof document !== 'undefined') {
-        await document.fonts.ready;
-      }
-    },
-  },
-  {
-    label: 'INITIALIZING WEBGL',
-    weight: 20,
-    fn: () =>
-      new Promise<void>((resolve) => {
-        // WebGL context check + brief initialization window
-        const canvas = document.createElement('canvas');
-        const gl =
-          canvas.getContext('webgl2') ||
-          canvas.getContext('webgl') ||
-          canvas.getContext('experimental-webgl');
-        // Give WebGL time to init
-        setTimeout(resolve, gl ? 400 : 800);
-      }),
-  },
-  {
-    label: 'LOADING 3D ENGINE',
-    weight: 25,
-    fn: () =>
-      new Promise<void>((resolve) => {
-        // Simulate Three.js + R3F module resolution
-        setTimeout(resolve, 600);
-      }),
-  },
-  {
-    label: 'PREPARING SHADERS',
-    weight: 20,
-    fn: () =>
-      new Promise<void>((resolve) => {
-        setTimeout(resolve, 500);
-      }),
-  },
-  {
-    label: 'BUILDING EXPERIENCE',
-    weight: 20,
-    fn: () =>
-      new Promise<void>((resolve) => {
-        setTimeout(resolve, 400);
-      }),
-  },
-];
-
-// ============================================
-// SOUND TOGGLE
+// SOUND TOGGLE COMPONENT
 // ============================================
 function SoundToggle() {
   const soundEnabled = useExperienceStore((s) => s.soundEnabled);
@@ -73,66 +18,28 @@ function SoundToggle() {
         toggleSound();
         play('click');
       }}
-      className="flex items-center gap-3 group cursor-none focus-visible:outline-2 focus-visible:outline-ds-lime"
-      aria-label={soundEnabled ? 'Disable sound' : 'Enable sound'}
+      className="flex items-center gap-3 group cursor-none focus-visible:outline-2 focus-visible:outline-ds-blue px-3 py-1.5 rounded-full border border-ds-border hover:border-ds-blue-highlight/40 transition-colors"
+      aria-label={soundEnabled ? 'Disable audio experience' : 'Enable audio experience'}
       aria-pressed={soundEnabled}
     >
-      <span className="text-label-mono text-ds-text-muted group-hover:text-ds-lime transition-colors duration-300">
-        SOUND
+      <span className="text-label-mono text-ds-text-muted group-hover:text-ds-blue-highlight transition-colors duration-300">
+        AUDIO
       </span>
-      <div className="relative w-10 h-5 rounded-full border border-ds-border overflow-hidden bg-ds-surface">
+      <div className="relative w-8 h-4 rounded-full border border-ds-border overflow-hidden bg-ds-surface">
         <div
-          className={`absolute inset-y-0 left-0 w-5 h-5 rounded-full transition-all duration-400 ease-expo-out ${
-            soundEnabled ? 'bg-ds-lime translate-x-5' : 'bg-ds-text-dim translate-x-0'
+          className={`absolute inset-y-0.5 left-0.5 w-3 h-3 rounded-full transition-all duration-300 ease-expo-out ${
+            soundEnabled ? 'bg-ds-blue-highlight translate-x-4' : 'bg-ds-text-dim translate-x-0'
           }`}
         />
       </div>
       <span
-        className={`text-label-mono transition-colors duration-300 ${
-          soundEnabled ? 'text-ds-lime' : 'text-ds-text-muted'
+        className={`text-label-mono font-mono text-[10px] transition-colors duration-300 ${
+          soundEnabled ? 'text-ds-blue-highlight' : 'text-ds-text-muted'
         }`}
       >
         {soundEnabled ? 'ON' : 'OFF'}
       </span>
     </button>
-  );
-}
-
-// ============================================
-// COUNTER
-// ============================================
-function Counter({ value }: { value: number }) {
-  const displayRef = useRef<HTMLSpanElement>(null);
-  const prevValue = useRef(value);
-
-  useEffect(() => {
-    if (!displayRef.current) return;
-    const start = prevValue.current;
-    const end = value;
-    const dur = 300;
-    const startTime = performance.now();
-
-    const animate = (now: number) => {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / dur, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      const current = Math.round(start + (end - start) * eased);
-      if (displayRef.current) {
-        displayRef.current.textContent = String(current).padStart(2, '0');
-      }
-      if (progress < 1) requestAnimationFrame(animate);
-      else prevValue.current = end;
-    };
-    requestAnimationFrame(animate);
-  }, [value]);
-
-  return (
-    <span
-      ref={displayRef}
-      className="tabular-nums"
-    >
-      {String(value).padStart(2, '0')}
-    </span>
   );
 }
 
@@ -144,148 +51,190 @@ interface PreloaderProps {
 }
 
 export default function Preloader({ onComplete }: PreloaderProps) {
-  const setLoadingProgress = useExperienceStore((s) => s.setLoadingProgress);
-  const setLoadingComplete = useExperienceStore((s) => s.setLoadingComplete);
-  const loadingProgress = useExperienceStore((s) => s.loadingProgress);
+  const [displayProgress, setDisplayProgress] = useState(0);
+  const [statusText, setStatusText] = useState('INITIALIZING ENVIRONMENT');
+  const [glInfo, setGlInfo] = useState('CHECKING GPU PIPELINE');
+  const [isExiting, setIsExiting] = useState(false);
+  const targetProgressRef = useRef(10);
+  const { play } = useSound();
 
-  const [currentTask, setCurrentTask] = useState('INITIALIZING');
-  const [, setIsExiting] = useState(false);
-  const preloaderRef = useRef<HTMLDivElement>(null);
-  const hasStarted = useRef(false);
+  // Genuine asset readiness tracker
+  useEffect(() => {
+    let isMounted = true;
 
-  const startExit = useCallback(() => {
-    setIsExiting(true);
-    setLoadingComplete(true);
+    async function runReadinessChecks() {
+      // 1. Font Readiness
+      if (typeof document !== 'undefined' && 'fonts' in document) {
+        setStatusText('SYNCING TYPOGRAPHY ENGINE');
+        await document.fonts.ready;
+        if (!isMounted) return;
+        targetProgressRef.current = Math.max(targetProgressRef.current, 35);
+      }
 
-    // Cinematic exit: clip-path wipe up
-    if (preloaderRef.current) {
-      preloaderRef.current.style.transition =
-        'clip-path 1.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s ease 0.8s';
-      preloaderRef.current.style.clipPath = 'inset(0 0 100% 0)';
-      preloaderRef.current.style.opacity = '0';
+      // 2. Real WebGL Context & Shader Compilation Check
+      if (typeof window !== 'undefined') {
+        setStatusText('PROBING WEBGL HARDWARE');
+        try {
+          const testCanvas = document.createElement('canvas');
+          const gl = (testCanvas.getContext('webgl2') ||
+            testCanvas.getContext('webgl') ||
+            testCanvas.getContext('experimental-webgl')) as
+            | WebGLRenderingContext
+            | WebGL2RenderingContext
+            | null;
+
+          if (gl) {
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            const renderer = debugInfo
+              ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL)
+              : 'GENERIC_GPU';
+            setGlInfo(renderer.substring(0, 32));
+
+            // Warm up shader compiler with tiny test program
+            const vs = gl.createShader(gl.VERTEX_SHADER);
+            if (vs) {
+              gl.shaderSource(vs, 'void main(){gl_Position=vec4(0.0,0.0,0.0,1.0);}');
+              gl.compileShader(vs);
+              gl.deleteShader(vs);
+            }
+          } else {
+            setGlInfo('FALLBACK_2D_RENDERER');
+          }
+        } catch {
+          setGlInfo('FALLBACK_MODE');
+        }
+
+        if (!isMounted) return;
+        targetProgressRef.current = Math.max(targetProgressRef.current, 65);
+      }
+
+      // 3. Document Complete
+      setStatusText('MOUNTING SCENIC GRAPH');
+      if (document.readyState === 'complete') {
+        targetProgressRef.current = Math.max(targetProgressRef.current, 85);
+      } else {
+        await new Promise((res) => {
+          window.addEventListener('load', res, { once: true });
+        });
+      }
+
+      if (!isMounted) return;
+      setStatusText('CORE SYSTEM READY');
+      targetProgressRef.current = 100;
     }
 
-    setTimeout(() => {
-      onComplete();
-    }, 1400);
-  }, [onComplete, setLoadingComplete]);
+    runReadinessChecks();
 
-  // Run loading tasks
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Smooth RAF progress interpolation
   useEffect(() => {
-    if (hasStarted.current) return;
-    hasStarted.current = true;
+    let animId: number;
 
-    let accumulated = 0;
-    const totalWeight = LOADING_TASKS.reduce((s, t) => s + t.weight, 0);
+    const tick = () => {
+      setDisplayProgress((prev) => {
+        const target = targetProgressRef.current;
+        if (prev < target) {
+          const step = Math.max(1, Math.ceil((target - prev) * 0.12));
+          const next = Math.min(target, prev + step);
+          if (next === 100 && prev < 100) {
+            // Trigger exit transition sequence
+            setTimeout(() => {
+              play('transition');
+              setIsExiting(true);
+              setTimeout(onComplete, 900);
+            }, 300);
+          }
+          return next;
+        }
+        return prev;
+      });
 
-    (async () => {
-      for (const task of LOADING_TASKS) {
-        setCurrentTask(task.label);
-        await task.fn();
-        accumulated += task.weight;
-        setLoadingProgress(Math.round((accumulated / totalWeight) * 100));
-        // Small gap between tasks
-        await new Promise<void>((r) => setTimeout(r, 50));
-      }
-      // Complete
-      setLoadingProgress(100);
-      await new Promise<void>((r) => setTimeout(r, 500));
-      startExit();
-    })();
-  }, [setLoadingProgress, startExit]);
+      animId = requestAnimationFrame(tick);
+    };
+
+    animId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(animId);
+  }, [onComplete, play]);
+
+  const formattedProgress = String(Math.floor(displayProgress)).padStart(2, '0');
 
   return (
     <div
-      ref={preloaderRef}
-      className="preloader"
-      style={{
-        clipPath: 'inset(0 0 0% 0)',
-        willChange: 'clip-path, opacity',
-      }}
+      className={`fixed inset-0 z-[9999] bg-ds-bg flex flex-col justify-between p-[6vw] select-none transition-all duration-700 ease-expo-out ${
+        isExiting ? 'opacity-0 pointer-events-none' : 'opacity-100'
+      }`}
       role="progressbar"
-      aria-valuenow={loadingProgress}
+      aria-valuenow={displayProgress}
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-label="Loading portfolio"
+      aria-label="Digital experience asset loader"
     >
-      {/* Top row */}
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-label-mono text-ds-text-muted mb-2">
-            DHRUV SAVALIYA
-          </p>
-          <p className="text-label-mono text-ds-text-dim">
-            PORTFOLIO â€” 2026
-          </p>
+      {/* Top Bar: Telemetry + Audio */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="w-2 h-2 rounded-full bg-ds-blue animate-pulse" />
+          <span className="text-label-mono text-ds-text-muted">
+            DHRUV SAVALIYA // SYSTEM READY: {formattedProgress}%
+          </span>
         </div>
         <SoundToggle />
       </div>
 
-      {/* Giant LOADING text */}
-      <div className="flex-1 flex items-center">
-        <h1
-          className="font-display font-bold text-ds-text select-none"
-          style={{
-            fontSize: 'clamp(5rem, 18vw, 22rem)',
-            lineHeight: 0.85,
-            letterSpacing: '-0.05em',
-          }}
-        >
-          LOADING
-        </h1>
-      </div>
-
-      {/* Progress section */}
-      <div className="space-y-6">
-        {/* Task label */}
-        <div className="flex items-center justify-between">
-          <p className="text-label-mono text-ds-text-muted tracking-widest">
-            {currentTask}
-          </p>
-          <p
-            className="font-display font-bold text-ds-lime"
+      {/* Center: Massive Editorial LOADING & Morph Axis */}
+      <div className="relative my-auto flex flex-col justify-center">
+        <div className="overflow-hidden">
+          <h1
+            className={`font-display font-bold text-ds-text tracking-tighter transition-all duration-700 ease-expo-out ${
+              isExiting ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100'
+            }`}
             style={{
-              fontSize: 'clamp(3rem, 8vw, 8rem)',
-              lineHeight: 1,
-              letterSpacing: '-0.04em',
+              fontSize: 'clamp(3.5rem, 13vw, 15rem)',
+              lineHeight: 0.85,
+              letterSpacing: '-0.05em',
             }}
           >
-            <Counter value={loadingProgress} />
-            <span className="text-ds-text-muted" style={{ fontSize: '0.4em' }}>%</span>
-          </p>
+            LOADING
+          </h1>
         </div>
 
-        {/* Progress bar */}
-        <div className="relative">
-          <div className="preloader__progress-bar-track h-px bg-ds-border w-full">
-            <div
-              className="preloader__progress-bar-fill h-px bg-ds-lime"
-              style={{
-                width: `${loadingProgress}%`,
-                boxShadow: '0 0 12px rgba(200,255,0,0.6)',
-                transition: 'width 0.3s ease-out',
-              }}
-            />
-          </div>
-
-          {/* Animated dot on bar */}
+        {/* Progress Line — Morphs into the Core central vertical axis at exit */}
+        <div className="relative mt-8 md:mt-12 w-full h-[2px] bg-ds-border overflow-hidden">
           <div
-            className="absolute top-1/2 w-2 h-2 -translate-y-1/2 -translate-x-1/2 rounded-full bg-ds-lime"
+            className="h-full bg-gradient-to-r from-ds-blue via-ds-blue-highlight to-ds-signal transition-all duration-200 ease-out"
             style={{
-              left: `${loadingProgress}%`,
-              boxShadow: '0 0 8px rgba(200,255,0,0.8)',
-              transition: 'left 0.3s ease-out',
+              width: `${displayProgress}%`,
+              boxShadow: '0 0 12px rgba(53, 109, 255, 0.4)',
             }}
           />
         </div>
 
-        {/* Bottom bar labels */}
-        <div className="flex justify-between">
-          <span className="text-label-mono text-ds-text-dim">
-            CODE â†’ DATA â†’ AI â†’ INTERACTION
+        {/* Dynamic Telemetry Status */}
+        <div className="flex items-center justify-between mt-3 text-label-mono text-ds-text-dim text-[11px]">
+          <span>{statusText}</span>
+          <span className="font-mono text-ds-text-muted">{glInfo}</span>
+        </div>
+      </div>
+
+      {/* Bottom Counter & System Specifications */}
+      <div className="flex items-end justify-between border-t border-ds-border pt-6">
+        <div>
+          <p className="text-label-mono text-ds-text-dim mb-1">ARCHITECTURE</p>
+          <p className="font-mono text-xs text-ds-text">R3F / THREE.JS / NEXT.JS 15</p>
+        </div>
+
+        <div className="text-right">
+          <span
+            className="font-display font-bold text-ds-text tracking-tight"
+            style={{ fontSize: 'clamp(2.5rem, 6vw, 6rem)', lineHeight: 0.9 }}
+          >
+            {formattedProgress}
           </span>
-          <span className="text-label-mono text-ds-text-dim">
-            {loadingProgress < 100 ? 'LOADING...' : 'READY'}
+          <span className="text-label-mono text-ds-blue-highlight ml-2 align-super text-xs">
+            / 100
           </span>
         </div>
       </div>
