@@ -118,7 +118,7 @@ export default function About() {
                 'AI-powered features',
                 'Interactive experiences',
                 'Production systems',
-              ].map((area, i) => (
+              ].map((area, _i) => (
                 <div key={area} className="flex items-center gap-3">
                   <span style={{ color: '#C8FF00', fontSize: '0.6rem' }}>▸</span>
                   <span className="font-body text-ds-text" style={{ fontSize: '0.9rem' }}>

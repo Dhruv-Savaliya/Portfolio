@@ -51,7 +51,7 @@ function MenuOverlay({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
           className="text-label-mono text-ds-text-muted hover:text-ds-lime transition-colors cursor-none"
           aria-label="Close menu"
         >
-          CLOSE ×
+          CLOSE Ã—
         </button>
       </div>
 
@@ -106,10 +106,8 @@ function MenuOverlay({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
 // NAVIGATION
 // ============================================
 export default function Navigation() {
-  const { menuOpen, toggleMenu } = useExperienceStore((s) => ({
-    menuOpen: s.menuOpen,
-    toggleMenu: s.toggleMenu,
-  }));
+  const menuOpen = useExperienceStore((s) => s.menuOpen);
+  const toggleMenu = useExperienceStore((s) => s.toggleMenu);
   const { play } = useSound();
   const [scrolled, setScrolled] = useState(false);
   const navRef = useRef<HTMLElement>(null);
@@ -151,7 +149,7 @@ export default function Navigation() {
           href="/"
           className="font-display font-bold text-ds-text hover:text-ds-lime transition-colors duration-300 cursor-none"
           style={{ fontSize: 'clamp(0.9rem, 1.5vw, 1.1rem)', letterSpacing: '-0.02em' }}
-          aria-label="Dhruv Savaliya — Home"
+          aria-label="Dhruv Savaliya â€” Home"
         >
           <span className="hidden md:inline">DHRUV.S</span>
           <span className="md:hidden">D</span>

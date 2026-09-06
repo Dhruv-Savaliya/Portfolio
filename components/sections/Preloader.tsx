@@ -63,10 +63,8 @@ const LOADING_TASKS: Array<{ label: string; weight: number; fn: () => Promise<vo
 // SOUND TOGGLE
 // ============================================
 function SoundToggle() {
-  const { soundEnabled, toggleSound } = useExperienceStore((s) => ({
-    soundEnabled: s.soundEnabled,
-    toggleSound: s.toggleSound,
-  }));
+  const soundEnabled = useExperienceStore((s) => s.soundEnabled);
+  const toggleSound = useExperienceStore((s) => s.toggleSound);
   const { play } = useSound();
 
   return (
@@ -146,15 +144,12 @@ interface PreloaderProps {
 }
 
 export default function Preloader({ onComplete }: PreloaderProps) {
-  const { setLoadingProgress, setLoadingComplete, loadingProgress } =
-    useExperienceStore((s) => ({
-      setLoadingProgress: s.setLoadingProgress,
-      setLoadingComplete: s.setLoadingComplete,
-      loadingProgress: s.loadingProgress,
-    }));
+  const setLoadingProgress = useExperienceStore((s) => s.setLoadingProgress);
+  const setLoadingComplete = useExperienceStore((s) => s.setLoadingComplete);
+  const loadingProgress = useExperienceStore((s) => s.loadingProgress);
 
   const [currentTask, setCurrentTask] = useState('INITIALIZING');
-  const [isExiting, setIsExiting] = useState(false);
+  const [, setIsExiting] = useState(false);
   const preloaderRef = useRef<HTMLDivElement>(null);
   const hasStarted = useRef(false);
 
@@ -220,7 +215,7 @@ export default function Preloader({ onComplete }: PreloaderProps) {
             DHRUV SAVALIYA
           </p>
           <p className="text-label-mono text-ds-text-dim">
-            PORTFOLIO — 2026
+            PORTFOLIO â€” 2026
           </p>
         </div>
         <SoundToggle />
@@ -287,7 +282,7 @@ export default function Preloader({ onComplete }: PreloaderProps) {
         {/* Bottom bar labels */}
         <div className="flex justify-between">
           <span className="text-label-mono text-ds-text-dim">
-            CODE → DATA → AI → INTERACTION
+            CODE â†’ DATA â†’ AI â†’ INTERACTION
           </span>
           <span className="text-label-mono text-ds-text-dim">
             {loadingProgress < 100 ? 'LOADING...' : 'READY'}

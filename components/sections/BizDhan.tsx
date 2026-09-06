@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import Link from 'next/link';
 
 // ============================================
@@ -100,7 +100,7 @@ function DashboardMockup({ visible }: { visible: boolean }) {
             </span>
           </div>
           <p style={{ fontSize: '0.6rem', color: '#F0EDE6', lineHeight: 1.5 }}>
-            "Expenses trending 8% below forecast. Consider investing surplus."
+            &quot;Expenses trending 8% below forecast. Consider investing surplus.&quot;
           </p>
         </div>
 
