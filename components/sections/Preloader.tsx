@@ -654,7 +654,7 @@ export default function Preloader({ onComplete }: PreloaderProps) {
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-white/[0.04] border border-white/10 text-[10px] font-mono tracking-widest text-white/70 animate-pulse">
             <span className="text-ds-blue-highlight">⌖</span>
             <span>[{popups[activePopupIndex].code}]</span>
-            <span className="text-white/40">//</span>
+            <span className="text-white/40">{'//'}</span>
             <span className="text-white/50 hidden sm:inline">{popups[activePopupIndex].loc}</span>
           </div>
         </div>
