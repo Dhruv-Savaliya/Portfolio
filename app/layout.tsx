@@ -68,7 +68,7 @@ export const metadata: Metadata = {
     siteName: 'Dhruv Savaliya',
     images: [
       {
-        url: '/og-image.png',
+        url: '/og-image.jpg',
         width: 1200,
         height: 630,
         alt: 'Dhruv Savaliya — Full Stack Developer',
@@ -80,8 +80,7 @@ export const metadata: Metadata = {
     title: 'Dhruv Savaliya — Full Stack Developer',
     description:
       'Full-stack developer building digital products with code, AI & interaction.',
-    creator: '@dhruvsavaliya',
-    images: ['/og-image.png'],
+    images: ['/og-image.jpg'],
   },
   robots: {
     index: true,
@@ -95,9 +94,9 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon-16x16.png',
-    apple: '/apple-touch-icon.png',
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
   },
 };
 
