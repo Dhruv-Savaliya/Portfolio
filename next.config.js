@@ -2,9 +2,13 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    domains: [],
+    unoptimized: true,
   },
-  transpilePackages: ['three'],
+  outputFileTracingExcludes: {
+    '*': [
+      './.git/**',
+    ],
+  },
 };
 
 module.exports = nextConfig;
