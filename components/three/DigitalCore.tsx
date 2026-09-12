@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useMemo, useEffect, useState } from 'react';
+import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useExperienceStore, CoreMorphTarget } from '@/lib/store';
@@ -86,7 +86,7 @@ interface DigitalCoreProps {
 export default function DigitalCore({
   mouseX = 0,
   mouseY = 0,
-  scale = 1,
+  _scale = 1,
 }: DigitalCoreProps) {
   const mainGroupRef = useRef<THREE.Group>(null);
   

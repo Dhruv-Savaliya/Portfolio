@@ -120,7 +120,7 @@ export default function Intro() {
           
           <div ref={footerRef} className="space-y-6" style={{ opacity: 0 }}>
             <p className="font-body text-white/60 text-sm md:text-base leading-relaxed max-w-md">
-              I'm Dhruv Savaliya — a Full-Stack Developer passionate about building scalable web applications, AI solutions and interactive 3D experiences.
+              I&apos;m Dhruv Savaliya — a Full-Stack Developer passionate about building scalable web applications, AI solutions and interactive 3D experiences.
             </p>
             
             <a

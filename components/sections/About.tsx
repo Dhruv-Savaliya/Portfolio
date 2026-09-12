@@ -98,7 +98,7 @@ export default function About() {
             className="font-display font-medium text-white tracking-tight leading-[1.1]"
             style={{ fontSize: 'clamp(2rem, 4vw, 3rem)' }}
           >
-            I'm Dhruv,
+            I&apos;m Dhruv,
             <br />
             Full-Stack Developer
             <br />
@@ -113,7 +113,7 @@ export default function About() {
 
           <div className="flex items-center gap-4 mt-4">
             <a href="#contact" className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full border border-white/20 hover:border-white/40 bg-transparent text-xs tracking-widest text-white transition-colors cursor-none">
-              LET'S CONNECT ↗
+              LET&apos;S CONNECT ↗
             </a>
           </div>
         </div>

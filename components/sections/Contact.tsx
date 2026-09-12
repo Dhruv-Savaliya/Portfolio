@@ -4,7 +4,6 @@ import { useRef, useEffect } from 'react';
 import { gsap, ScrollTrigger } from '@/lib/gsap-init';
 import { useExperienceStore } from '@/lib/store';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import Link from 'next/link';
 
 export default function Contact() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -70,7 +69,7 @@ export default function Contact() {
         </h2>
         
         <a href="mailto:dhruvsavaliya075@gmail.com" className="inline-flex items-center gap-2 mt-4 text-ds-blue hover:text-ds-blue-highlight transition-colors font-mono tracking-widest text-sm w-fit cursor-none">
-          LET'S TALK ↗
+          LET&apos;S TALK ↗
         </a>
 
         <div className="flex items-center gap-6 mt-8">

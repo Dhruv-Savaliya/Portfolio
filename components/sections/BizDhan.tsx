@@ -1,7 +1,6 @@
 'use client';
 
 import { useRef, useEffect } from 'react';
-import Link from 'next/link';
 import { gsap, ScrollTrigger } from '@/lib/gsap-init';
 import { useExperienceStore } from '@/lib/store';
 import { useReducedMotion } from '@/hooks/useReducedMotion';

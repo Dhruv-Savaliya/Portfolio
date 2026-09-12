@@ -186,38 +186,7 @@ function SoundIndicator() {
   );
 }
 
-// ============================================================================
-// HUD GLYPHS (BOTTOM-LEFT 4 TACTICAL RETICLE ICONS)
-// ============================================================================
-function HudGlyphs() {
-  return (
-    <div className="flex items-center gap-3 select-none">
-      {/* 01: Concentric Dial */}
-      <div className="relative w-7 h-7 rounded-full border border-white/20 flex items-center justify-center">
-        <div className="w-4 h-4 rounded-full border border-dashed border-white/40 animate-spin" style={{ animationDuration: '8s' }} />
-        <div className="w-1.5 h-1.5 rounded-full bg-white/60" />
-      </div>
-      {/* 02: Geodesic Globe */}
-      <div className="relative w-7 h-7 rounded-full border border-white/20 flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0.5 border border-white/30 rounded-full" />
-        <div className="w-full h-px bg-white/30 absolute" />
-        <div className="w-px h-full bg-white/30 absolute" />
-        <div className="w-3.5 h-3.5 rounded-full border border-white/50" />
-      </div>
-      {/* 03: Crosshair Radar */}
-      <div className="relative w-7 h-7 rounded-full border border-white/20 flex items-center justify-center">
-        <div className="absolute top-0 bottom-0 w-px bg-white/40" />
-        <div className="absolute left-0 right-0 h-px bg-white/40" />
-        <div className="w-3 h-3 rounded-full border border-white/60" />
-      </div>
-      {/* 04: Polygon Node Tracker */}
-      <div className="relative w-7 h-7 border border-white/20 flex items-center justify-center rotate-45">
-        <div className="w-3.5 h-3.5 border border-white/40 rotate-45 animate-spin" style={{ animationDuration: '14s' }} />
-        <div className="w-1 h-1 bg-ds-blue-highlight" />
-      </div>
-    </div>
-  );
-}
+
 
 // ============================================================================
 // MAIN PRELOADER — WITH CINEMATIC GSAP EXIT
@@ -242,7 +211,6 @@ export default function Preloader({ onComplete, onTransitionStart }: PreloaderPr
   const svgOverlayRef = useRef<SVGSVGElement>(null);
 
   const [displayProgress, setDisplayProgress] = useState(0);
-  const [activePopupIndex, setActivePopupIndex] = useState(0);
   const targetProgressRef = useRef(15);
   const exitStartedRef = useRef(false);
   const { play } = useSound();
@@ -615,11 +583,11 @@ export default function Preloader({ onComplete, onTransitionStart }: PreloaderPr
 
   // Sub-telemetry percentages derived from overall progress
   const fontProgress    = Math.min(100, Math.round(displayProgress * 1.15));
-  const imageProgress   = Math.min(100, Math.round(displayProgress * 1.08));
+  const _imageProgress   = Math.min(100, Math.round(displayProgress * 1.08));
   const assets3dProgress = Math.min(100, Math.round(displayProgress * 0.95));
   const textureProgress = Math.min(100, Math.round(displayProgress * 0.92));
   const webglProgress   = Math.min(100, Math.round(displayProgress * 0.88));
-  const appAssetsProgress = Math.min(100, Math.round(displayProgress * 0.85));
+  const _appAssetsProgress = Math.min(100, Math.round(displayProgress * 0.85));
 
   return (
     <div
