@@ -1,39 +1,31 @@
 'use client';
 
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useExperienceStore, CoreMorphTarget } from '@/lib/store';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 // ============================================
 // CORE SHADER DEFINITIONS
 // ============================================
 const coreVertexShader = `
   uniform float uTime;
-  uniform float uMorphProgress;
   uniform float uDistortion;
   uniform vec2 uMouse;
   
   varying vec3 vNormal;
   varying vec3 vPosition;
   varying float vFresnel;
-  varying float vElevation;
 
   void main() {
     vNormal = normalize(normalMatrix * normal);
     vPosition = position;
 
-    // Controlled procedural surface resonance
     float wave = sin(position.x * 2.5 + uTime * 0.8) * cos(position.y * 2.5 + uTime * 0.6);
     float displacement = wave * uDistortion * 0.15;
     
-    // Subtle pointer deflection
-    float mouseDist = length(position.xy - uMouse);
-    displacement += sin(mouseDist * 3.0 - uTime * 1.5) * 0.03 * uDistortion;
-
     vec3 newPos = position + normal * displacement;
-    vElevation = displacement;
-
     vec4 mvPosition = modelViewMatrix * vec4(newPos, 1.0);
     gl_Position = projectionMatrix * mvPosition;
 
@@ -46,28 +38,16 @@ const coreFragmentShader = `
   uniform float uTime;
   uniform vec3 uColorBase;
   uniform vec3 uColorRim;
-  uniform vec3 uColorSignal;
-  uniform float uSignalStrength;
   uniform float uOpacity;
 
   varying vec3 vNormal;
   varying vec3 vPosition;
   varying float vFresnel;
-  varying float vElevation;
 
   void main() {
-    // Dark ink core with electric blue rim
     vec3 color = mix(uColorBase, uColorRim, vFresnel * 0.85);
-
-    // Subtle technical scanline
     float scan = sin(vPosition.y * 40.0 + uTime * 3.0) * 0.03 + 0.97;
     color *= scan;
-
-    // Signal accent pulse (for AI / active transitions)
-    if (uSignalStrength > 0.01) {
-      color = mix(color, uColorSignal, uSignalStrength * (vElevation * 4.0 + 0.3));
-    }
-
     gl_FragColor = vec4(color, uOpacity * (0.8 + vFresnel * 0.2));
   }
 `;
@@ -78,93 +58,20 @@ const coreFragmentShader = `
 interface TransformState {
   pos: [number, number, number];
   rotSpeed: number;
-  scale: number;
-  distortion: number;
-  signal: number;
-  ringSpread: number;
 }
 
 const MORPH_STATES: Record<CoreMorphTarget, TransformState> = {
-  hero: {
-    pos: [0, 0, 0],
-    rotSpeed: 0.003,
-    scale: 1.0,
-    distortion: 0.2,
-    signal: 0.0,
-    ringSpread: 1.0,
-  },
-  intro: {
-    pos: [0, 0, -1.2],
-    rotSpeed: 0.002,
-    scale: 0.8,
-    distortion: 0.1,
-    signal: 0.0,
-    ringSpread: 0.8,
-  },
-  bizdhan: {
-    pos: [1.3, 0.1, -0.4],
-    rotSpeed: 0.004,
-    scale: 0.95,
-    distortion: 0.35,
-    signal: 0.1,
-    ringSpread: 1.4,
-  },
-  clearclaim: {
-    pos: [-1.2, -0.1, -0.5],
-    rotSpeed: 0.0035,
-    scale: 0.9,
-    distortion: 0.25,
-    signal: 0.15,
-    ringSpread: 1.6,
-  },
-  receipt: {
-    pos: [1.2, 0.0, -0.3],
-    rotSpeed: 0.005,
-    scale: 0.9,
-    distortion: 0.4,
-    signal: 0.3,
-    ringSpread: 1.2,
-  },
-  about: {
-    pos: [0, 0, -0.6],
-    rotSpeed: 0.002,
-    scale: 0.85,
-    distortion: 0.15,
-    signal: 0.0,
-    ringSpread: 0.9,
-  },
-  technology: {
-    pos: [1.4, -0.2, -0.2],
-    rotSpeed: 0.006,
-    scale: 1.05,
-    distortion: 0.3,
-    signal: 0.4,
-    ringSpread: 1.5,
-  },
-  contact: {
-    pos: [0, 0.2, -0.1],
-    rotSpeed: 0.008,
-    scale: 1.15,
-    distortion: 0.45,
-    signal: 0.6,
-    ringSpread: 1.3,
-  },
-  footer: {
-    pos: [0, 0, 0],
-    rotSpeed: 0.001,
-    scale: 0.75,
-    distortion: 0.05,
-    signal: 0.2,
-    ringSpread: 0.4,
-  },
-  idle: {
-    pos: [0, 0, 0],
-    rotSpeed: 0.003,
-    scale: 1.0,
-    distortion: 0.2,
-    signal: 0.0,
-    ringSpread: 1.0,
-  },
+  hero: { pos: [0, 0, 0], rotSpeed: 0.003 },
+  intro: { pos: [1.5, 0, -1], rotSpeed: 0.002 },
+  bizdhan: { pos: [1.2, 0.2, -0.4], rotSpeed: 0.004 },
+  clearclaim: { pos: [1.2, 0.2, -0.4], rotSpeed: 0.0035 },
+  smartreceipt: { pos: [1.2, 0.2, -0.4], rotSpeed: 0.005 },
+  about: { pos: [1.2, 0.2, -0.4], rotSpeed: 0.002 },
+  experience: { pos: [0, 0, -0.8], rotSpeed: 0.002 },
+  technology: { pos: [0, 0, 0], rotSpeed: 0.006 },
+  contact: { pos: [1.5, 0.2, -1], rotSpeed: 0.008 },
+  footer: { pos: [0, 0, 0], rotSpeed: 0.001 },
+  idle: { pos: [0, 0, 0], rotSpeed: 0.003 },
 };
 
 // ============================================
@@ -181,247 +88,258 @@ export default function DigitalCore({
   mouseY = 0,
   scale = 1,
 }: DigitalCoreProps) {
-  const groupRef = useRef<THREE.Group>(null);
-  const nucleusRef = useRef<THREE.Mesh>(null);
-  const innerCageRef = useRef<THREE.Mesh>(null);
-  const ring1Ref = useRef<THREE.Mesh>(null);
-  const ring2Ref = useRef<THREE.Mesh>(null);
-  const ring3Ref = useRef<THREE.Mesh>(null);
-  const nodesGroupRef = useRef<THREE.Group>(null);
-  const dMonogramRef = useRef<THREE.Group>(null);
+  const mainGroupRef = useRef<THREE.Group>(null);
+  
+  // Model refs
+  const heroCoreRef = useRef<THREE.Group>(null);
+  const bizdhanRef = useRef<THREE.Group>(null);
+  const clearclaimRef = useRef<THREE.Group>(null);
+  const smartreceiptRef = useRef<THREE.Group>(null);
+  const aboutRef = useRef<THREE.Group>(null);
+  const experienceRef = useRef<THREE.Group>(null);
+  const technologyRef = useRef<THREE.Group>(null);
 
   const coreMorphTarget = useExperienceStore((s) => s.coreMorphTarget);
-  const activeTechCategory = useExperienceStore((s) => s.activeTechCategory);
+  const prefersReducedMotion = useReducedMotion();
 
-  // Shader uniforms
-  const coreUniforms = useMemo(
-    () => ({
-      uTime: { value: 0 },
-      uMorphProgress: { value: 0 },
-      uDistortion: { value: 0.2 },
-      uMouse: { value: new THREE.Vector2(0, 0) },
-      uColorBase: { value: new THREE.Color('#080B10') },
-      uColorRim: { value: new THREE.Color('#356DFF') },
-      uColorSignal: { value: new THREE.Color('#B8FF5A') },
-      uSignalStrength: { value: 0 },
-      uOpacity: { value: 1.0 },
-    }),
-    []
-  );
-
-  // Instanced nodes data (24 network nodes that reorganize per scene)
-  const nodeCount = 24;
-  const nodeCoords = useMemo(() => {
-    const coords: THREE.Vector3[] = [];
-    for (let i = 0; i < nodeCount; i++) {
-      const phi = Math.acos(-1 + (2 * i) / nodeCount);
-      const theta = Math.sqrt(nodeCount * Math.PI) * phi;
-      coords.push(
-        new THREE.Vector3(
-          Math.cos(theta) * Math.sin(phi) * 1.8,
-          Math.sin(theta) * Math.sin(phi) * 1.8,
-          Math.cos(phi) * 1.8
-        )
-      );
-    }
-    return coords;
-  }, [nodeCount]);
-
-  // Current interpolated values for smooth transitions
+  // Internal animated properties
   const currentPos = useRef(new THREE.Vector3(0, 0, 0));
-  const currentScale = useRef(1.0);
-  const currentDistortion = useRef(0.2);
-  const currentSignal = useRef(0.0);
+  
+  // Scales for individual models
+  const scales = useRef({
+    heroCore: 1,
+    bizdhan: 0,
+    clearclaim: 0,
+    smartreceipt: 0,
+    about: 0,
+    experience: 0,
+    technology: 0,
+  });
 
-  // Node position targets based on active scene / tech category
+  const coreUniforms = useMemo(() => ({
+    uTime: { value: 0 },
+    uDistortion: { value: 0.2 },
+    uMouse: { value: new THREE.Vector2(0, 0) },
+    uColorBase: { value: new THREE.Color('#080B10') },
+    uColorRim: { value: new THREE.Color('#356DFF') },
+    uOpacity: { value: 1.0 },
+  }), []);
+
   useFrame((state, delta) => {
-    const targetState = MORPH_STATES[coreMorphTarget] || MORPH_STATES.hero;
+    if (prefersReducedMotion) return;
+
     const time = state.clock.getElapsedTime();
+    const targetState = MORPH_STATES[coreMorphTarget] || MORPH_STATES.hero;
 
-    // 1. Smoothly interpolate position, scale, and distortion
-    currentPos.current.lerp(
-      new THREE.Vector3(...targetState.pos),
-      Math.min(1, delta * 3.5)
-    );
-    currentScale.current = THREE.MathUtils.lerp(
-      currentScale.current,
-      targetState.scale * scale,
-      Math.min(1, delta * 3.5)
-    );
-    currentDistortion.current = THREE.MathUtils.lerp(
-      currentDistortion.current,
-      targetState.distortion,
-      Math.min(1, delta * 3.5)
-    );
-
-    // Boost signal if tech category hovered
-    let targetSignal = targetState.signal;
-    if (activeTechCategory) targetSignal = 0.7;
-
-    currentSignal.current = THREE.MathUtils.lerp(
-      currentSignal.current,
-      targetSignal,
-      Math.min(1, delta * 4.0)
-    );
-
-    // Apply to group
-    if (groupRef.current) {
-      // Parallax mouse follow with controlled damping
+    // 1. Move the entire group to position
+    currentPos.current.lerp(new THREE.Vector3(...targetState.pos), Math.min(1, delta * 3.5));
+    if (mainGroupRef.current) {
       const targetParallaxX = currentPos.current.x + mouseX * 0.25;
       const targetParallaxY = currentPos.current.y - mouseY * 0.25;
-
-      groupRef.current.position.x = THREE.MathUtils.lerp(
-        groupRef.current.position.x,
-        targetParallaxX,
-        Math.min(1, delta * 4)
+      mainGroupRef.current.position.set(
+        THREE.MathUtils.lerp(mainGroupRef.current.position.x, targetParallaxX, delta * 4),
+        THREE.MathUtils.lerp(mainGroupRef.current.position.y, targetParallaxY, delta * 4),
+        THREE.MathUtils.lerp(mainGroupRef.current.position.z, currentPos.current.z, delta * 4)
       );
-      groupRef.current.position.y = THREE.MathUtils.lerp(
-        groupRef.current.position.y,
-        targetParallaxY,
-        Math.min(1, delta * 4)
-      );
-      groupRef.current.position.z = THREE.MathUtils.lerp(
-        groupRef.current.position.z,
-        currentPos.current.z,
-        Math.min(1, delta * 4)
-      );
-
-      groupRef.current.scale.setScalar(currentScale.current);
-
-      // Controlled rotational drift
-      groupRef.current.rotation.y += targetState.rotSpeed;
-      groupRef.current.rotation.x = THREE.MathUtils.lerp(
-        groupRef.current.rotation.x,
-        mouseY * 0.15,
-        Math.min(1, delta * 3)
-      );
-      groupRef.current.rotation.z = THREE.MathUtils.lerp(
-        groupRef.current.rotation.z,
-        mouseX * 0.1,
-        Math.min(1, delta * 3)
-      );
+      mainGroupRef.current.rotation.y += targetState.rotSpeed;
+      mainGroupRef.current.rotation.x = THREE.MathUtils.lerp(mainGroupRef.current.rotation.x, mouseY * 0.15, delta * 3);
+      mainGroupRef.current.rotation.z = THREE.MathUtils.lerp(mainGroupRef.current.rotation.z, mouseX * 0.1, delta * 3);
     }
 
-    // 2. Orbital Rings Kinetic Choreography
-    if (ring1Ref.current) {
-      ring1Ref.current.rotation.x = time * 0.35;
-      ring1Ref.current.rotation.y = time * 0.2;
-      const ringScale = targetState.ringSpread;
-      ring1Ref.current.scale.setScalar(ringScale);
-    }
-    if (ring2Ref.current) {
-      ring2Ref.current.rotation.y = -time * 0.45;
-      ring2Ref.current.rotation.z = time * 0.25;
-      const ringScale = targetState.ringSpread * 1.15;
-      ring2Ref.current.scale.setScalar(ringScale);
-    }
-    if (ring3Ref.current) {
-      ring3Ref.current.rotation.x = -time * 0.25;
-      ring3Ref.current.rotation.z = -time * 0.35;
-      const ringScale = targetState.ringSpread * 1.3;
-      ring3Ref.current.scale.setScalar(ringScale);
-    }
+    // 2. Animate individual model scales based on active state
+    const dt = Math.min(1, delta * 5.0);
+    scales.current.heroCore = THREE.MathUtils.lerp(scales.current.heroCore, ['hero', 'intro', 'contact', 'footer', 'idle'].includes(coreMorphTarget) ? 1 : 0, dt);
+    scales.current.bizdhan = THREE.MathUtils.lerp(scales.current.bizdhan, coreMorphTarget === 'bizdhan' ? 1 : 0, dt);
+    scales.current.clearclaim = THREE.MathUtils.lerp(scales.current.clearclaim, coreMorphTarget === 'clearclaim' ? 1 : 0, dt);
+    scales.current.smartreceipt = THREE.MathUtils.lerp(scales.current.smartreceipt, coreMorphTarget === 'smartreceipt' ? 1 : 0, dt);
+    scales.current.about = THREE.MathUtils.lerp(scales.current.about, coreMorphTarget === 'about' ? 1 : 0, dt);
+    scales.current.experience = THREE.MathUtils.lerp(scales.current.experience, coreMorphTarget === 'experience' ? 1 : 0, dt);
+    scales.current.technology = THREE.MathUtils.lerp(scales.current.technology, coreMorphTarget === 'technology' ? 1 : 0, dt);
 
-    // 3. Inner Cage Counter-Rotation
-    if (innerCageRef.current) {
-      innerCageRef.current.rotation.x = -time * 0.4;
-      innerCageRef.current.rotation.y = -time * 0.3;
-    }
+    // Apply scales
+    if (heroCoreRef.current) heroCoreRef.current.scale.setScalar(scales.current.heroCore);
+    if (bizdhanRef.current) bizdhanRef.current.scale.setScalar(scales.current.bizdhan);
+    if (clearclaimRef.current) clearclaimRef.current.scale.setScalar(scales.current.clearclaim);
+    if (smartreceiptRef.current) smartreceiptRef.current.scale.setScalar(scales.current.smartreceipt);
+    if (aboutRef.current) aboutRef.current.scale.setScalar(scales.current.about);
+    if (experienceRef.current) experienceRef.current.scale.setScalar(scales.current.experience);
+    if (technologyRef.current) technologyRef.current.scale.setScalar(scales.current.technology);
 
-    // 4. Update Uniforms
+    // 3. Update uniforms and internal animations
     coreUniforms.uTime.value = time;
-    coreUniforms.uDistortion.value = currentDistortion.current;
-    coreUniforms.uSignalStrength.value = currentSignal.current;
-    coreUniforms.uMouse.value.set(mouseX, mouseY);
-
-    // 5. Footer Monogram Mode: Reveal "D" structural form when footer is active
-    if (dMonogramRef.current) {
-      const isFooter = coreMorphTarget === 'footer';
-      dMonogramRef.current.scale.lerp(
-        new THREE.Vector3(isFooter ? 1 : 0.01, isFooter ? 1 : 0.01, isFooter ? 1 : 0.01),
-        Math.min(1, delta * 4)
-      );
+    
+    if (heroCoreRef.current) {
+      heroCoreRef.current.rotation.x = time * 0.1;
+      heroCoreRef.current.rotation.y = time * 0.15;
+    }
+    if (bizdhanRef.current) {
+      bizdhanRef.current.rotation.y = time * 0.2;
+    }
+    if (clearclaimRef.current) {
+      clearclaimRef.current.rotation.x = time * 0.1;
+      clearclaimRef.current.rotation.y = time * 0.2;
+    }
+    if (smartreceiptRef.current) {
+      smartreceiptRef.current.rotation.y = time * 0.1;
+      // Animate laser scanner line
+      const laser = smartreceiptRef.current.children.find(c => c.name === 'laser');
+      if (laser) {
+        laser.position.z = Math.sin(time * 2) * 0.8;
+      }
+    }
+    if (aboutRef.current) {
+      aboutRef.current.rotation.y = time * 0.1;
+      aboutRef.current.rotation.z = time * 0.05;
+    }
+    if (experienceRef.current) {
+      experienceRef.current.rotation.z = time * 0.05;
+    }
+    if (technologyRef.current) {
+      technologyRef.current.rotation.y = time * 0.1;
     }
   });
 
   return (
-    <group ref={groupRef}>
-      {/* ── Central Polyhedral Nucleus (Icosahedron with Custom Shader) ── */}
-      <mesh ref={nucleusRef}>
-        <icosahedronGeometry args={[1.2, 3]} />
-        <shaderMaterial
-          vertexShader={coreVertexShader}
-          fragmentShader={coreFragmentShader}
-          uniforms={coreUniforms}
-          transparent
-          depthWrite
-        />
-      </mesh>
-
-      {/* ── Inner Structural Wireframe Lattice ── */}
-      <mesh ref={innerCageRef}>
-        <octahedronGeometry args={[1.35, 1]} />
-        <meshBasicMaterial
-          color="#7EA2FF"
-          wireframe
-          transparent
-          opacity={0.35}
-        />
-      </mesh>
-
-      {/* ── Precision Orbital Gimbal Rings ── */}
-      <mesh ref={ring1Ref}>
-        <torusGeometry args={[1.65, 0.012, 16, 100]} />
-        <meshBasicMaterial color="#356DFF" transparent opacity={0.5} />
-      </mesh>
-
-      <mesh ref={ring2Ref}>
-        <torusGeometry args={[1.9, 0.01, 16, 100]} />
-        <meshBasicMaterial color="#7EA2FF" transparent opacity={0.35} />
-      </mesh>
-
-      <mesh ref={ring3Ref}>
-        <torusGeometry args={[2.15, 0.008, 16, 100]} />
-        <meshBasicMaterial color="#B8FF5A" transparent opacity={0.25} />
-      </mesh>
-
-      {/* ── Network Satellite Nodes (Instanced Flow Points) ── */}
-      <group ref={nodesGroupRef}>
-        {nodeCoords.map((pos, idx) => (
-          <mesh key={idx} position={pos}>
-            <octahedronGeometry args={[0.045, 0]} />
-            <meshBasicMaterial
-              color={idx % 4 === 0 ? '#B8FF5A' : '#7EA2FF'}
-              transparent
-              opacity={0.7}
-            />
-          </mesh>
-        ))}
+    <group ref={mainGroupRef}>
+      
+      {/* 1. HERO CORE */}
+      <group ref={heroCoreRef}>
+        <mesh>
+          <icosahedronGeometry args={[1.2, 3]} />
+          <shaderMaterial vertexShader={coreVertexShader} fragmentShader={coreFragmentShader} uniforms={coreUniforms} transparent depthWrite />
+        </mesh>
+        <mesh>
+          <octahedronGeometry args={[1.35, 1]} />
+          <meshBasicMaterial color="#7EA2FF" wireframe transparent opacity={0.35} />
+        </mesh>
+        <mesh rotation={[Math.PI/4, Math.PI/4, 0]}>
+          <torusGeometry args={[1.8, 0.012, 16, 100]} />
+          <meshBasicMaterial color="#356DFF" transparent opacity={0.5} />
+        </mesh>
       </group>
 
-      {/* ── Monogram "D" Structural Geometry (Revealed at Footer Collapse) ── */}
-      <group ref={dMonogramRef} scale={[0.01, 0.01, 0.01]}>
-        {/* Spine line */}
-        <mesh position={[-0.4, 0, 0]}>
-          <boxGeometry args={[0.08, 2.0, 0.08]} />
-          <meshBasicMaterial color="#356DFF" />
+      {/* 2. BIZDHAN CHART */}
+      <group ref={bizdhanRef}>
+        {/* Three bar charts */}
+        {[0, 1, 2].map((i) => {
+          const height = 0.8 + (i * 0.4);
+          return (
+            <mesh key={i} position={[(i - 1) * 0.6, height / 2 - 0.5, 0]}>
+              <boxGeometry args={[0.4, height, 0.4]} />
+              <meshBasicMaterial color="#356DFF" transparent opacity={0.6} wireframe />
+              <mesh scale={[0.9, 0.9, 0.9]}>
+                <boxGeometry args={[0.4, height, 0.4]} />
+                <meshBasicMaterial color="#080B10" />
+              </mesh>
+            </mesh>
+          );
+        })}
+        {/* Base grid */}
+        <gridHelper args={[3, 10, '#356DFF', '#356DFF']} position={[0, -0.5, 0]} rotation={[0, 0, 0]} material-transparent material-opacity={0.3} />
+      </group>
+
+      {/* 3. CLEARCLAIM NODES */}
+      <group ref={clearclaimRef}>
+        <mesh position={[0, 1, 0]}>
+          <octahedronGeometry args={[0.4, 0]} />
+          <meshBasicMaterial color="#B8FF5A" wireframe />
         </mesh>
-        {/* Top bar */}
-        <mesh position={[-0.05, 0.95, 0]}>
-          <boxGeometry args={[0.7, 0.08, 0.08]} />
-          <meshBasicMaterial color="#7EA2FF" />
+        <mesh position={[-0.8, -0.5, 0]}>
+          <octahedronGeometry args={[0.4, 0]} />
+          <meshBasicMaterial color="#356DFF" wireframe />
         </mesh>
-        {/* Bottom bar */}
-        <mesh position={[-0.05, -0.95, 0]}>
-          <boxGeometry args={[0.7, 0.08, 0.08]} />
-          <meshBasicMaterial color="#7EA2FF" />
+        <mesh position={[0.8, -0.5, 0]}>
+          <octahedronGeometry args={[0.4, 0]} />
+          <meshBasicMaterial color="#7EA2FF" wireframe />
         </mesh>
-        {/* Arc */}
-        <mesh position={[0.3, 0, 0]} rotation={[0, 0, -Math.PI / 2]}>
-          <torusGeometry args={[0.95, 0.04, 16, 32, Math.PI]} />
+        {/* Connecting lines */}
+        <mesh position={[-0.4, 0.25, 0]} rotation={[0, 0, Math.PI / 4]}>
+          <cylinderGeometry args={[0.01, 0.01, 1.2]} />
+          <meshBasicMaterial color="#356DFF" transparent opacity={0.5} />
+        </mesh>
+        <mesh position={[0.4, 0.25, 0]} rotation={[0, 0, -Math.PI / 4]}>
+          <cylinderGeometry args={[0.01, 0.01, 1.2]} />
+          <meshBasicMaterial color="#356DFF" transparent opacity={0.5} />
+        </mesh>
+        <mesh position={[0, -0.5, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.01, 0.01, 1.6]} />
+          <meshBasicMaterial color="#356DFF" transparent opacity={0.5} />
+        </mesh>
+      </group>
+
+      {/* 4. SMART RECEIPT SCANNER */}
+      <group ref={smartreceiptRef} rotation={[-Math.PI/2 + 0.2, 0, 0]}>
+        {/* Document plane */}
+        <mesh>
+          <planeGeometry args={[1.5, 2]} />
+          <meshBasicMaterial color="#080B10" side={THREE.DoubleSide} />
+        </mesh>
+        <mesh>
+          <planeGeometry args={[1.5, 2]} />
+          <meshBasicMaterial color="#356DFF" wireframe />
+        </mesh>
+        {/* Laser line */}
+        <mesh name="laser" position={[0, 0, 0]}>
+          <boxGeometry args={[1.8, 0.02, 0.05]} />
           <meshBasicMaterial color="#B8FF5A" />
         </mesh>
       </group>
+
+      {/* 5. ABOUT NEURAL NODES */}
+      <group ref={aboutRef}>
+        {[...Array(15)].map((_, i) => {
+          const pos = [
+            (Math.random() - 0.5) * 2,
+            (Math.random() - 0.5) * 2,
+            (Math.random() - 0.5) * 2
+          ] as [number, number, number];
+          return (
+            <mesh key={i} position={pos}>
+              <sphereGeometry args={[0.05, 8, 8]} />
+              <meshBasicMaterial color="#356DFF" />
+            </mesh>
+          );
+        })}
+        {/* Inner glow core */}
+        <mesh>
+          <sphereGeometry args={[0.8, 16, 16]} />
+          <meshBasicMaterial color="#7EA2FF" wireframe transparent opacity={0.2} />
+        </mesh>
+      </group>
+
+      {/* 6. EXPERIENCE TIMELINE SPIRAL */}
+      <group ref={experienceRef}>
+        {[...Array(30)].map((_, i) => {
+          const angle = i * 0.3;
+          const radius = 0.5 + i * 0.05;
+          const x = Math.cos(angle) * radius;
+          const y = Math.sin(angle) * radius;
+          return (
+            <mesh key={i} position={[x, y, -i * 0.1]} rotation={[0, 0, angle]}>
+              <boxGeometry args={[0.2, 0.02, 0.02]} />
+              <meshBasicMaterial color="#356DFF" transparent opacity={1 - (i / 30)} />
+            </mesh>
+          );
+        })}
+      </group>
+
+      {/* 7. TECHNOLOGY GLOBE */}
+      <group ref={technologyRef}>
+        <mesh>
+          <sphereGeometry args={[2.0, 24, 24]} />
+          <meshBasicMaterial color="#356DFF" wireframe transparent opacity={0.3} />
+        </mesh>
+        <mesh scale={[0.9, 0.9, 0.9]}>
+          <sphereGeometry args={[2.0, 16, 16]} />
+          <meshBasicMaterial color="#080B10" />
+        </mesh>
+        {/* Equatorial ring */}
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[2.2, 0.02, 16, 100]} />
+          <meshBasicMaterial color="#B8FF5A" transparent opacity={0.5} />
+        </mesh>
+      </group>
+
     </group>
   );
 }

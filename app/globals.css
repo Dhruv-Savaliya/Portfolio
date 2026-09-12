@@ -280,6 +280,30 @@ a {
 }
 
 /* ============================================
+   GLASSMORPHISM PANEL UTILITIES
+   ============================================ */
+.glass-panel {
+  background-color: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.glass-panel-light {
+  background-color: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.20);
+}
+
+.glass-panel-dark {
+  background-color: rgba(8, 11, 16, 0.75);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(244, 246, 250, 0.08);
+}
+
+/* ============================================
    PRELOADER STYLES
    ============================================ */
 .preloader {
@@ -436,6 +460,18 @@ canvas {
 
   .grain-overlay {
     display: none;
+  }
+
+  /* Explicitly stop Digital Core rotation & particle drift */
+  .digital-core,
+  .digital-core * {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  /* GSAP will check useReducedMotion() — these are CSS fallbacks */
+  canvas {
+    pointer-events: none;
   }
 }
 

@@ -4,14 +4,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  outputFileTracingExcludes: {
-    '*': [
-      './.git/**',
-    ],
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+
 };
 
 module.exports = nextConfig;

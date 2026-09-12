@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import * as THREE from 'three';
+import gsap from 'gsap';
 import { useExperienceStore } from '@/lib/store';
 import { useSound } from '@/hooks/useSound';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 // ============================================================================
-// PROCEDURAL SHADERS FOR MARVEL IRON MAN / CELESTIAL EARTH SPHERE
+// PROCEDURAL SHADERS FOR CELESTIAL EARTH SPHERE
 // ============================================================================
 const EarthVertexShader = `
   varying vec3 vNormal;
@@ -27,7 +29,6 @@ const EarthFragmentShader = `
   varying vec2 vUv;
   uniform float uTime;
 
-  // Simplex-like procedural 3D noise for continental landmasses
   vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
   vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
   vec4 permute(vec4 x) { return mod289(((x * 34.0) + 1.0) * x); }
@@ -80,52 +81,43 @@ const EarthFragmentShader = `
     vec3 viewDir = normalize(-vPosition);
     vec3 normal = normalize(vNormal);
 
-    // Continental multi-octave FBM terrain map
     vec3 sphereCoord = vPosition * 0.45;
     float n1 = snoise(sphereCoord * 1.8 + vec3(0.0, uTime * 0.02, 0.0));
     float n2 = snoise(sphereCoord * 4.2 - vec3(uTime * 0.01, 0.0, 0.0)) * 0.5;
     float n3 = snoise(sphereCoord * 9.5) * 0.25;
     float terrain = n1 + n2 + n3;
 
-    // Technical latitude/longitude holographic coordinate lines
     float latLines = step(0.96, sin(vUv.y * 3.14159265 * 36.0));
     float longLines = step(0.96, sin(vUv.x * 3.14159265 * 48.0));
     float grid = max(latLines, longLines) * 0.25;
 
-    // Directional sunlight coming from top-left
     vec3 sunDir = normalize(vec3(-0.9, 0.65, 0.75));
     float NdotL = dot(normal, sunDir);
     float diffuse = clamp(NdotL, 0.0, 1.0);
 
-    // Fresnel atmospheric rim illumination
     float fresnel = pow(1.0 - max(dot(viewDir, normal), 0.0), 2.8);
 
-    // Night side city light grid & data cluster glow
     float nightMask = smoothstep(0.15, -0.4, NdotL);
     float cityNodes = step(0.72, snoise(sphereCoord * 14.0)) * step(0.1, terrain);
     vec3 cityGlow = vec3(0.55, 0.75, 1.0) * cityNodes * nightMask * 1.6;
 
-    // Base color tones: Dark celestial deep space ocean & crisp lunar landmasses
     vec3 oceanColor = vec3(0.04, 0.06, 0.09);
     vec3 landColor = vec3(0.16, 0.18, 0.22);
     if (terrain > 0.05) {
       oceanColor = mix(oceanColor, landColor, smoothstep(0.05, 0.25, terrain));
     }
 
-    // Color assembly
     vec3 litSurface = oceanColor * (0.08 + diffuse * 0.85);
     vec3 rimAtmosphere = vec3(0.48, 0.68, 0.95) * fresnel * (0.4 + diffuse * 1.4);
     vec3 hudGridColor = vec3(0.4, 0.6, 0.9) * grid * (0.3 + diffuse * 0.7);
 
     vec3 finalColor = litSurface + rimAtmosphere + cityGlow + hudGridColor;
 
-    // Subtle edge fade to merge seamlessly into cosmic background
     float alpha = smoothstep(-0.2, 0.15, dot(viewDir, normal));
     gl_FragColor = vec4(finalColor, min(1.0, alpha + fresnel * 0.8));
   }
 `;
 
-// Atmosphere outer halo shader
 const AtmosphereVertexShader = `
   varying vec3 vNormal;
   varying vec3 vPosition;
@@ -164,8 +156,9 @@ function SoundIndicator() {
         toggleSound();
         play('click');
       }}
-      className="flex items-center gap-2 group cursor-pointer font-mono text-[11px] tracking-wider text-white/60 hover:text-white transition-colors select-none focus:outline-none"
+      className="flex items-center gap-2 group cursor-pointer font-mono text-[11px] tracking-wider text-white/60 hover:text-white transition-colors select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ds-blue focus-visible:ring-offset-2 focus-visible:ring-offset-transparent rounded-sm"
       aria-label={soundEnabled ? 'Mute sound' : 'Enable sound'}
+      aria-pressed={soundEnabled}
     >
       <div className="flex items-center gap-[2.5px] h-3.5 px-1">
         {[0.4, 0.8, 1.0, 0.6, 0.9, 0.5].map((h, i) => (
@@ -199,27 +192,24 @@ function SoundIndicator() {
 function HudGlyphs() {
   return (
     <div className="flex items-center gap-3 select-none">
-      {/* 01: Concentric Dial with rotating tick */}
+      {/* 01: Concentric Dial */}
       <div className="relative w-7 h-7 rounded-full border border-white/20 flex items-center justify-center">
         <div className="w-4 h-4 rounded-full border border-dashed border-white/40 animate-spin" style={{ animationDuration: '8s' }} />
         <div className="w-1.5 h-1.5 rounded-full bg-white/60" />
       </div>
-
-      {/* 02: Geodesic Globe Wireframe */}
+      {/* 02: Geodesic Globe */}
       <div className="relative w-7 h-7 rounded-full border border-white/20 flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0.5 border border-white/30 rounded-full" />
         <div className="w-full h-px bg-white/30 absolute" />
         <div className="w-px h-full bg-white/30 absolute" />
         <div className="w-3.5 h-3.5 rounded-full border border-white/50" />
       </div>
-
       {/* 03: Crosshair Radar */}
       <div className="relative w-7 h-7 rounded-full border border-white/20 flex items-center justify-center">
         <div className="absolute top-0 bottom-0 w-px bg-white/40" />
         <div className="absolute left-0 right-0 h-px bg-white/40" />
         <div className="w-3 h-3 rounded-full border border-white/60" />
       </div>
-
       {/* 04: Polygon Node Tracker */}
       <div className="relative w-7 h-7 border border-white/20 flex items-center justify-center rotate-45">
         <div className="w-3.5 h-3.5 border border-white/40 rotate-45 animate-spin" style={{ animationDuration: '14s' }} />
@@ -230,19 +220,33 @@ function HudGlyphs() {
 }
 
 // ============================================================================
-// MAIN MARVEL IRON MAN HUD PRELOADER
+// MAIN PRELOADER — WITH CINEMATIC GSAP EXIT
 // ============================================================================
 interface PreloaderProps {
   onComplete: () => void;
+  /** Called when exit timeline starts — allows hero to begin mounting early */
+  onTransitionStart?: () => void;
 }
 
-export default function Preloader({ onComplete }: PreloaderProps) {
+export default function Preloader({ onComplete, onTransitionStart }: PreloaderProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const progressBarRef = useRef<HTMLDivElement>(null);
+  const progressBarFillRef = useRef<HTMLDivElement>(null);
+  const loadingLabelRef = useRef<HTMLParagraphElement>(null);
+  const percentDisplayRef = useRef<HTMLDivElement>(null);
+  const hudTopRef = useRef<HTMLDivElement>(null);
+  const hudBottomRef = useRef<HTMLDivElement>(null);
+  const hudCenterRef = useRef<HTMLDivElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
+  const svgOverlayRef = useRef<SVGSVGElement>(null);
+
   const [displayProgress, setDisplayProgress] = useState(0);
-  const [isExiting, setIsExiting] = useState(false);
   const [activePopupIndex, setActivePopupIndex] = useState(0);
   const targetProgressRef = useRef(15);
+  const exitStartedRef = useRef(false);
   const { play } = useSound();
+  const prefersReducedMotion = useReducedMotion();
 
   // Marvel Iron Man Tactical Telemetry Popups
   const popups = useMemo(
@@ -251,12 +255,12 @@ export default function Preloader({ onComplete }: PreloaderProps) {
       { code: 'GEO_POS: 21.1702°N, 72.8311°E', loc: 'SURAT GROUND STATION LINK' },
       { code: 'NEURAL LINK: ESTABLISHED', loc: 'DATA LATENCY: < 1.4MS' },
       { code: 'QUANTUM BUFFER: 100% SYNC', loc: 'SHADERS COMPILED' },
-      { code: 'RENDER TARGET: THREE.JS 3D', loc: 'IRON MAN HUD FLIGHT READY' },
+      { code: 'RENDER TARGET: THREE.JS 3D', loc: 'DIGITAL CORE FLIGHT READY' },
     ],
     []
   );
 
-  // Cycling telemetry popup marker
+  // Cycling telemetry popup
   useEffect(() => {
     const interval = setInterval(() => {
       setActivePopupIndex((prev) => (prev + 1) % popups.length);
@@ -276,7 +280,7 @@ export default function Preloader({ onComplete }: PreloaderProps) {
         targetProgressRef.current = Math.max(targetProgressRef.current, 45);
       }
 
-      // 2. Short synthetic delay for dramatic Iron Man boot sequence
+      // 2. Short delay for dramatic boot sequence
       await new Promise((res) => setTimeout(res, 350));
       if (!isMounted) return;
       targetProgressRef.current = Math.max(targetProgressRef.current, 72);
@@ -294,11 +298,128 @@ export default function Preloader({ onComplete }: PreloaderProps) {
     }
 
     runReadiness();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, []);
+
+  // ── CINEMATIC EXIT TIMELINE ──────────────────────────────────────────────
+  const triggerCinematicExit = useCallback(() => {
+    if (exitStartedRef.current) return;
+    exitStartedRef.current = true;
+
+    play('transition');
+
+    // Notify parent so hero can begin mounting beneath us
+    onTransitionStart?.();
+
+    if (prefersReducedMotion) {
+      // Reduced motion: simple fade, no flourish
+      if (containerRef.current) {
+        containerRef.current.style.transition = 'opacity 0.4s ease-out';
+        containerRef.current.style.opacity = '0';
+      }
+      setTimeout(onComplete, 450);
+      return;
+    }
+
+    const tl = gsap.timeline({
+      onComplete: () => {
+        onComplete();
+      },
+    });
+
+    // ── Step 1: Collapse peripheral HUD elements (0.0 → 0.35s)
+    tl.to(
+      [hudTopRef.current, hudBottomRef.current, popupRef.current, svgOverlayRef.current],
+      {
+        opacity: 0,
+        y: -8,
+        duration: 0.35,
+        stagger: 0.05,
+        ease: 'power2.in',
+      },
+      0
+    );
+
+    // ── Step 2: Collapse center HUD readouts but keep bar & percent (0.1 → 0.45s)
+    tl.to(
+      hudCenterRef.current?.querySelectorAll(
+        '.hud-radar, .hud-popup, .hud-telemetry'
+      ) ?? [],
+      {
+        opacity: 0,
+        scale: 0.96,
+        duration: 0.3,
+        ease: 'power2.in',
+      },
+      0.1
+    );
+
+    // ── Step 3: "LOADING" label morphs → scale up then fade (0.2 → 0.55s)
+    tl.to(
+      loadingLabelRef.current,
+      {
+        letterSpacing: '0.6em',
+        opacity: 0,
+        duration: 0.45,
+        ease: 'power2.inOut',
+      },
+      0.2
+    );
+
+    // ── Step 4: Percent counter completes and fades (0.3 → 0.6s)
+    tl.to(
+      percentDisplayRef.current,
+      {
+        scale: 1.08,
+        opacity: 0,
+        duration: 0.35,
+        ease: 'expo.out',
+      },
+      0.3
+    );
+
+    // ── Step 5: Progress bar expands full-width then becomes a horizontal rule (0.4 → 0.9s)
+    tl.to(
+      progressBarFillRef.current,
+      {
+        width: '100%',
+        duration: 0.3,
+        ease: 'power2.inOut',
+      },
+      0.4
+    ).to(
+      progressBarRef.current,
+      {
+        scaleY: 0.3,
+        duration: 0.25,
+        ease: 'power2.in',
+      },
+      0.55
+    );
+
+    // ── Step 6: The line glows electric blue then shoots upward (0.7 → 1.05s)
+    tl.to(
+      progressBarRef.current,
+      {
+        scaleX: 0,
+        transformOrigin: 'center center',
+        duration: 0.4,
+        ease: 'expo.inOut',
+      },
+      0.7
+    );
+
+    // ── Step 7: Entire container fades out (0.8 → 1.1s)
+    tl.to(
+      containerRef.current,
+      {
+        opacity: 0,
+        duration: 0.4,
+        ease: 'power2.inOut',
+      },
+      0.8
+    );
+  }, [onComplete, onTransitionStart, play, prefersReducedMotion]);
 
   // Smooth progress count-up RAF loop
   useEffect(() => {
@@ -311,12 +432,8 @@ export default function Preloader({ onComplete }: PreloaderProps) {
           const step = Math.max(1, Math.ceil((target - prev) * 0.09));
           const next = Math.min(target, prev + step);
           if (next >= 100 && prev < 100) {
-            // Iron Man HUD Launch sequence
-            setTimeout(() => {
-              play('transition');
-              setIsExiting(true);
-              setTimeout(onComplete, 850);
-            }, 500);
+            // Trigger cinematic exit after a brief hold at 100%
+            setTimeout(triggerCinematicExit, 500);
           }
           return next;
         }
@@ -328,9 +445,9 @@ export default function Preloader({ onComplete }: PreloaderProps) {
 
     animId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(animId);
-  }, [onComplete, play]);
+  }, [triggerCinematicExit]);
 
-  // Three.js Earth / Celestial Rotating Sphere Implementation
+  // Three.js Earth / Celestial Rotating Sphere
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -359,30 +476,24 @@ export default function Preloader({ onComplete }: PreloaderProps) {
     );
     camera.position.set(0, 0, 10);
 
-    // Group for planet and orbital satellite rings
     const planetGroup = new THREE.Group();
     scene.add(planetGroup);
 
-    // Initial position on right edge matching user's image
     const updatePlanetPlacement = () => {
       const aspect = window.innerWidth / window.innerHeight;
       if (aspect > 1.2) {
-        // Desktop / wide screens: emerge gracefully on the right
         planetGroup.position.set(aspect * 3.4, -0.2, 0);
         planetGroup.scale.set(1.0, 1.0, 1.0);
       } else {
-        // Mobile screens: placed centered or lower-right
         planetGroup.position.set(aspect * 2.2, -0.6, -1.5);
         planetGroup.scale.set(0.85, 0.85, 0.85);
       }
     };
     updatePlanetPlacement();
 
-    // 1. Earth Sphere Core (Procedural Shader)
+    // Earth Sphere
     const earthGeometry = new THREE.SphereGeometry(3.6, 64, 64);
-    const earthUniforms = {
-      uTime: { value: 0 },
-    };
+    const earthUniforms = { uTime: { value: 0 } };
     const earthMaterial = new THREE.ShaderMaterial({
       vertexShader: EarthVertexShader,
       fragmentShader: EarthFragmentShader,
@@ -393,7 +504,7 @@ export default function Preloader({ onComplete }: PreloaderProps) {
     const earthMesh = new THREE.Mesh(earthGeometry, earthMaterial);
     planetGroup.add(earthMesh);
 
-    // 2. Outer Atmospheric Glow Shell
+    // Atmospheric Glow
     const atmoGeometry = new THREE.SphereGeometry(3.78, 48, 48);
     const atmoMaterial = new THREE.ShaderMaterial({
       vertexShader: AtmosphereVertexShader,
@@ -402,10 +513,9 @@ export default function Preloader({ onComplete }: PreloaderProps) {
       blending: THREE.AdditiveBlending,
       side: THREE.BackSide,
     });
-    const atmoMesh = new THREE.Mesh(atmoGeometry, atmoMaterial);
-    planetGroup.add(atmoMesh);
+    planetGroup.add(new THREE.Mesh(atmoGeometry, atmoMaterial));
 
-    // 3. Orbital Satellite Ring Trajectory
+    // Orbital Ring
     const ringGeometry = new THREE.RingGeometry(4.3, 4.34, 96);
     const ringMaterial = new THREE.MeshBasicMaterial({
       color: 0x7ea2ff,
@@ -418,13 +528,13 @@ export default function Preloader({ onComplete }: PreloaderProps) {
     ringMesh.rotation.y = Math.PI * 0.15;
     planetGroup.add(ringMesh);
 
-    // 4. Moving Orbital Satellite Beacon
+    // Satellite Beacon
     const satGeometry = new THREE.SphereGeometry(0.06, 16, 16);
     const satMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
     const satellite = new THREE.Mesh(satGeometry, satMaterial);
     planetGroup.add(satellite);
 
-    // 5. Starfield & Cosmic Particle Dust in the deep background
+    // Starfield
     const starCount = 350;
     const starPositions = new Float32Array(starCount * 3);
     for (let i = 0; i < starCount * 3; i += 3) {
@@ -440,10 +550,9 @@ export default function Preloader({ onComplete }: PreloaderProps) {
       transparent: true,
       opacity: 0.45,
     });
-    const stars = new THREE.Points(starGeo, starMat);
-    scene.add(stars);
+    scene.add(new THREE.Points(starGeo, starMat));
 
-    // Mouse parallax tracking (Iron Man helmet interactive feedback)
+    // Mouse parallax
     let mouseX = 0;
     let mouseY = 0;
     const onMouseMove = (e: MouseEvent) => {
@@ -452,33 +561,24 @@ export default function Preloader({ onComplete }: PreloaderProps) {
     };
     window.addEventListener('mousemove', onMouseMove, { passive: true });
 
-    // Resize handler
     const onResize = () => {
       if (!renderer) return;
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      camera.aspect = w / h;
+      camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
-      renderer.setSize(w, h);
+      renderer.setSize(window.innerWidth, window.innerHeight);
       updatePlanetPlacement();
     };
     window.addEventListener('resize', onResize);
 
-    // Render loop
     let animId: number;
     const clock = new THREE.Clock();
 
     const animate = () => {
       const elapsed = clock.getElapsedTime();
-
-      // Rotate planet on its technical axis
       earthMesh.rotation.y = elapsed * 0.08;
       earthMesh.rotation.x = 0.12;
-
-      // Update procedural landmass evolution & atmosphere
       earthUniforms.uTime.value = elapsed;
 
-      // Orbit satellite along the inclined ring
       const orbitAngle = elapsed * 0.8;
       satellite.position.set(
         Math.cos(orbitAngle) * 4.32,
@@ -486,7 +586,6 @@ export default function Preloader({ onComplete }: PreloaderProps) {
         Math.sin(orbitAngle) * 3.4
       );
 
-      // Mouse parallax easing
       planetGroup.rotation.y = mouseX * 0.5;
       planetGroup.rotation.x = -mouseY * 0.5;
 
@@ -500,7 +599,6 @@ export default function Preloader({ onComplete }: PreloaderProps) {
       cancelAnimationFrame(animId);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('resize', onResize);
-
       earthGeometry.dispose();
       earthMaterial.dispose();
       atmoGeometry.dispose();
@@ -511,44 +609,42 @@ export default function Preloader({ onComplete }: PreloaderProps) {
       satMaterial.dispose();
       starGeo.dispose();
       starMat.dispose();
-
       renderer?.dispose();
     };
   }, []);
 
-  // Formatted sub-telemetry items based on overall progress
-  const fontProgress = Math.min(100, Math.round(displayProgress * 1.15));
-  const imageProgress = Math.min(100, Math.round(displayProgress * 1.08));
+  // Sub-telemetry percentages derived from overall progress
+  const fontProgress    = Math.min(100, Math.round(displayProgress * 1.15));
+  const imageProgress   = Math.min(100, Math.round(displayProgress * 1.08));
   const assets3dProgress = Math.min(100, Math.round(displayProgress * 0.95));
   const textureProgress = Math.min(100, Math.round(displayProgress * 0.92));
-  const webglProgress = Math.min(100, Math.round(displayProgress * 0.88));
+  const webglProgress   = Math.min(100, Math.round(displayProgress * 0.88));
   const appAssetsProgress = Math.min(100, Math.round(displayProgress * 0.85));
 
   return (
     <div
-      className={`fixed inset-0 z-[99999] bg-[#050608] text-[#E8ECF2] overflow-hidden select-none flex flex-col justify-between p-[4vw] md:p-[3.5vw] font-mono transition-opacity duration-700 ease-out ${
-        isExiting ? 'opacity-0 pointer-events-none scale-105' : 'opacity-100 scale-100'
-      }`}
+      ref={containerRef}
+      className="fixed inset-0 z-[99999] bg-[#050608] text-[#E8ECF2] overflow-hidden select-none flex flex-col justify-between p-[4vw] md:p-[3.5vw] font-mono"
       role="progressbar"
       aria-valuenow={displayProgress}
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-label="Dhruv Savaliya Iron Man HUD Experience Initializer"
+      aria-label="Loading Dhruv Savaliya's portfolio experience"
     >
-      {/* Three.js 3D Earth / Planet WebGL Canvas */}
+      {/* Three.js WebGL Canvas */}
       <canvas
         ref={canvasRef}
         className="absolute inset-0 w-full h-full pointer-events-none z-0"
         aria-hidden="true"
       />
 
-      {/* Subtle Iron Man HUD Orbital Trajectory Splines & Moving Dots Overlay */}
+      {/* SVG Orbital Trajectory Overlay */}
       <svg
+        ref={svgOverlayRef}
         className="absolute inset-0 w-full h-full pointer-events-none z-10 opacity-35"
         xmlns="http://www.w3.org/2000/svg"
         aria-hidden="true"
       >
-        {/* Upper major orbital trajectory ellipse */}
         <path
           d="M -100,280 Q 700,-50 1700,260"
           fill="none"
@@ -556,227 +652,96 @@ export default function Preloader({ onComplete }: PreloaderProps) {
           strokeWidth="1"
           strokeDasharray="4 8"
         />
-        {/* Diagonal trajectory */}
         <path
           d="M 50,850 L 1400,-100"
           fill="none"
           stroke="rgba(255, 255, 255, 0.12)"
           strokeWidth="1"
         />
-
-        {/* Animated tracking dots moving along the Iron Man orbital path */}
         <circle r="3.5" fill="#7EA2FF" className="animate-pulse">
-          <animateMotion
-            path="M -100,280 Q 700,-50 1700,260"
-            dur="9s"
-            repeatCount="indefinite"
-          />
+          <animateMotion path="M -100,280 Q 700,-50 1700,260" dur="9s" repeatCount="indefinite" />
         </circle>
         <circle r="2.5" fill="#FFFFFF">
-          <animateMotion
-            path="M -100,280 Q 700,-50 1700,260"
-            dur="9s"
-            begin="-4.5s"
-            repeatCount="indefinite"
-          />
+          <animateMotion path="M -100,280 Q 700,-50 1700,260" dur="9s" begin="-4.5s" repeatCount="indefinite" />
         </circle>
         <circle r="3" fill="#B8FF5A">
-          <animateMotion
-            path="M 50,850 L 1400,-100"
-            dur="7s"
-            repeatCount="indefinite"
-          />
+          <animateMotion path="M 50,850 L 1400,-100" dur="7s" repeatCount="indefinite" />
         </circle>
       </svg>
 
-      {/* Grid crosshair markers (+) */}
-      <div className="absolute top-[16%] left-[6%] text-white/20 text-xs font-mono select-none pointer-events-none">+</div>
-      <div className="absolute top-[22%] right-[10%] text-white/20 text-xs font-mono select-none pointer-events-none">+</div>
-      <div className="absolute bottom-[28%] left-[12%] text-white/20 text-xs font-mono select-none pointer-events-none">+</div>
+      {/* Grid crosshair markers */}
+      <div className="absolute top-[16%] left-[6%] text-white/20 text-xs select-none pointer-events-none">+</div>
+      <div className="absolute top-[22%] right-[10%] text-white/20 text-xs select-none pointer-events-none">+</div>
+      <div className="absolute bottom-[28%] left-[12%] text-white/20 text-xs select-none pointer-events-none">+</div>
 
-      {/* ── TOP HEADER HUD ──────────────────────────────────────────────── */}
-      <header className="relative z-20 flex items-start justify-between w-full">
-        {/* Left: ⌖ DHRUV.S with horizontal rule */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-white">
-            <span className="text-sm font-mono text-white/80">⌖</span>
-            <span className="font-mono text-xs md:text-sm font-semibold tracking-[0.22em]">
-              DHRUV.S
-            </span>
-          </div>
-          <div className="hidden sm:block w-20 md:w-28 h-px bg-white/20" />
-        </div>
+      {/* ── TOP RIGHT: SOUND TOGGLE ────────────────────────────────── */}
+      <div ref={hudTopRef} className="absolute top-8 right-8 z-20 flex items-center gap-6">
+        <SoundIndicator />
+      </div>
 
-        {/* Right: Technical disciplines */}
-        <div className="text-right font-mono text-[10px] md:text-[11px] leading-tight text-white/60">
-          <p className="tracking-widest uppercase text-white/80 font-medium">
-            FULL-STACK DEVELOPER
+      {/* ── CENTER LEFT: LOADING HUD ───────────────────────────────── */}
+      <div
+        ref={hudCenterRef}
+        className="relative z-20 h-full flex flex-col justify-center items-start pl-[5vw] lg:pl-[8vw] w-full max-w-2xl"
+      >
+        <div className="flex flex-col gap-2">
+          {/* Small top text */}
+          <p className="text-[10px] md:text-xs tracking-[0.25em] text-white/50 uppercase mb-2">
+            INITIALIZING SYSTEMS
           </p>
-          <p className="tracking-wider mt-0.5 text-white/40">
-            NEXT.JS / REACT / TYPESCRIPT / NODE.JS / AI / INTERACTIVE WEB
-          </p>
-        </div>
-      </header>
-
-      {/* ── CENTER AREA: UPPER RADAR RETICLE & MAIN LOADING HUD ─────────── */}
-      <div className="relative z-20 my-auto flex flex-col items-center justify-center w-full max-w-4xl mx-auto">
-        {/* UPPER RETICLE RADAR / CORE INITIALIZER */}
-        <div className="flex items-center gap-5 mb-10 md:mb-14 select-none">
-          {/* Circular radar target reticle */}
-          <div className="relative w-14 h-14 md:w-16 md:h-16 rounded-full border border-white/20 flex items-center justify-center">
-            {/* Outer spinning dashed ring */}
-            <div
-              className="absolute inset-0 rounded-full border border-dashed border-white/40 animate-spin"
-              style={{ animationDuration: '10s' }}
-            />
-            {/* Inner rotating reticle ticks */}
-            <div
-              className="absolute inset-2 rounded-full border border-white/25 animate-spin"
-              style={{ animationDuration: '6s', animationDirection: 'reverse' }}
-            />
-            {/* Center glowing core point */}
-            <div className="relative w-2 h-2 rounded-full bg-white shadow-[0_0_10px_#FFFFFF]" />
-            {/* Crosshairs */}
-            <div className="absolute top-0 bottom-0 w-px bg-white/30" />
-            <div className="absolute left-0 right-0 h-px bg-white/30" />
-          </div>
-
-          {/* Telemetry Status Lines beside Radar */}
-          <div className="text-left font-mono text-[9px] md:text-[10px] leading-relaxed text-white/50 tracking-wider">
-            <p className="text-white/80 font-medium">INITIALIZING DIGITAL CORE</p>
-            <p>LOADING ASSETS</p>
-            <p>PREPARING EXPERIENCE</p>
-          </div>
-        </div>
-
-        {/* Dynamic Iron Man HUD Target Popup (Pops up with bracket notation) */}
-        <div className="mb-4 text-center select-none">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-white/[0.04] border border-white/10 text-[10px] font-mono tracking-widest text-white/70 animate-pulse">
-            <span className="text-ds-blue-highlight">⌖</span>
-            <span>[{popups[activePopupIndex].code}]</span>
-            <span className="text-white/40">{'//'}</span>
-            <span className="text-white/50 hidden sm:inline">{popups[activePopupIndex].loc}</span>
-          </div>
-        </div>
-
-        {/* LOADING LABEL & LARGE PERCENTAGE DISPLAY */}
-        <div className="text-center space-y-1 select-none">
-          <p className="text-xs md:text-sm font-mono tracking-[0.35em] text-white/70 uppercase">
+          
+          {/* Main LOADING text */}
+          <p
+            ref={loadingLabelRef}
+            className="text-4xl md:text-6xl lg:text-7xl font-display font-medium tracking-widest text-white uppercase"
+          >
             LOADING
           </p>
-          <div className="font-display font-bold text-3xl md:text-5xl tracking-tight text-white">
+
+          {/* Percentage */}
+          <div
+            ref={percentDisplayRef}
+            className="text-3xl md:text-5xl font-mono text-white/90 mt-2 mb-4"
+            aria-live="polite"
+            aria-atomic="true"
+          >
             {displayProgress}%
           </div>
-        </div>
 
-        {/* TACTICAL PROGRESS BAR CONTAINER */}
-        <div className="relative w-full max-w-sm md:max-w-md mt-5 mb-8">
-          {/* Tactical Corner Brackets [   ] */}
-          <div className="relative h-7 md:h-8 p-1 border border-white/25 bg-black/60 backdrop-blur-sm">
-            {/* Left bracket decorative tick */}
-            <span className="absolute -left-1.5 -top-1.5 w-2 h-2 border-t-2 border-l-2 border-white/60" />
-            <span className="absolute -left-1.5 -bottom-1.5 w-2 h-2 border-b-2 border-l-2 border-white/60" />
-            {/* Right bracket decorative tick */}
-            <span className="absolute -right-1.5 -top-1.5 w-2 h-2 border-t-2 border-r-2 border-white/60" />
-            <span className="absolute -right-1.5 -bottom-1.5 w-2 h-2 border-b-2 border-r-2 border-white/60" />
-
-            {/* Inner Progress Fill with Metallic / Scanline Texture */}
+          {/* Progress Bar */}
+          <div ref={progressBarRef} className="w-64 md:w-80 h-[2px] bg-white/10 mb-8 relative rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-[#505763] via-[#8A94A6] to-[#C8D1E0] relative overflow-hidden transition-all duration-200 ease-out"
+              ref={progressBarFillRef}
+              className="absolute top-0 left-0 bottom-0 bg-ds-blue shadow-[0_0_15px_#356DFF] transition-all duration-200 ease-out"
               style={{ width: `${displayProgress}%` }}
-            >
-              {/* Scanline overlay pattern */}
-              <div
-                className="absolute inset-0 opacity-40"
-                style={{
-                  backgroundImage:
-                    'repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(0,0,0,0.35) 3px, rgba(0,0,0,0.35) 6px)',
-                }}
-              />
-              {/* Glowing leading edge */}
-              <div className="absolute right-0 top-0 bottom-0 w-2 bg-white shadow-[0_0_8px_#FFFFFF]" />
+            />
+          </div>
+
+          {/* Details List */}
+          <div className="flex flex-col gap-2 text-[10px] md:text-xs font-mono text-white/60 tracking-wider">
+            <div className="flex items-center gap-4 w-64 md:w-80">
+              <span className="w-44 text-white/80">&gt; LOADING FONTS</span>
+              <span className="flex-1 text-right">{fontProgress}%</span>
+            </div>
+            <div className="flex items-center gap-4 w-64 md:w-80">
+              <span className="w-44 text-white/80">&gt; LOADING 3D MODELS</span>
+              <span className="flex-1 text-right">{assets3dProgress}%</span>
+            </div>
+            <div className="flex items-center gap-4 w-64 md:w-80">
+              <span className="w-44 text-white/80">&gt; LOADING TEXTURES</span>
+              <span className="flex-1 text-right">{textureProgress}%</span>
+            </div>
+            <div className="flex items-center gap-4 w-64 md:w-80">
+              <span className="w-44 text-white/80">&gt; INITIALIZING WEBGL</span>
+              <span className="flex-1 text-right">{webglProgress}%</span>
+            </div>
+            <div className="flex items-center gap-4 w-64 md:w-80">
+              <span className="w-44 text-white/80">&gt; FINALIZING SCENE</span>
+              <span className="flex-1 text-right">{displayProgress}%</span>
             </div>
           </div>
         </div>
-
-        {/* SUB-TELEMETRY TABLE (6-ITEM GRID WITH LIVE PERCENTAGES) */}
-        <div className="w-full max-w-sm md:max-w-md grid grid-cols-2 gap-x-8 gap-y-2 text-[10px] md:text-[11px] font-mono select-none text-white/70">
-          {/* Column 1 */}
-          <div className="flex items-center justify-between border-b border-white/10 pb-1">
-            <span className="flex items-center gap-1.5">
-              <span className="text-white/40">→</span> FONTS
-            </span>
-            <span className="text-white font-medium">{fontProgress}%</span>
-          </div>
-          <div className="flex items-center justify-between border-b border-white/10 pb-1">
-            <span className="flex items-center gap-1.5">
-              <span className="text-white/40">→</span> TEXTURES
-            </span>
-            <span className="text-white font-medium">{textureProgress}%</span>
-          </div>
-
-          {/* Column 2 */}
-          <div className="flex items-center justify-between border-b border-white/10 pb-1">
-            <span className="flex items-center gap-1.5">
-              <span className="text-white/40">→</span> IMAGES
-            </span>
-            <span className="text-white font-medium">{imageProgress}%</span>
-          </div>
-          <div className="flex items-center justify-between border-b border-white/10 pb-1">
-            <span className="flex items-center gap-1.5">
-              <span className="text-white/40">→</span> WEBGL
-            </span>
-            <span className="text-white font-medium">{webglProgress}%</span>
-          </div>
-
-          {/* Column 3 */}
-          <div className="flex items-center justify-between border-b border-white/10 pb-1">
-            <span className="flex items-center gap-1.5">
-              <span className="text-white/40">→</span> 3D ASSETS
-            </span>
-            <span className="text-white font-medium">{assets3dProgress}%</span>
-          </div>
-          <div className="flex items-center justify-between border-b border-white/10 pb-1">
-            <span className="flex items-center gap-1.5">
-              <span className="text-white/40">→</span> APP ASSETS
-            </span>
-            <span className="text-white font-medium">{appAssetsProgress}%</span>
-          </div>
-        </div>
       </div>
-
-      {/* ── BOTTOM HUD FOOTER ────────────────────────────────────────────── */}
-      <footer className="relative z-20 flex flex-col md:flex-row items-start md:items-end justify-between gap-6 w-full pt-4">
-        {/* Left: 4 Animated HUD Dials + Location Telemetry */}
-        <div className="flex items-center gap-5">
-          <HudGlyphs />
-          <div className="font-mono text-[10px] md:text-[11px] leading-tight text-white/60">
-            <p className="text-white/80">SURAT / INDIA</p>
-            <p className="text-white/40 mt-0.5">FULL-STACK / AI / 3D</p>
-          </div>
-        </div>
-
-        {/* Right: Signature Display Headline & Sound Toggle */}
-        <div className="flex flex-col items-start md:items-end text-left md:text-right gap-3">
-          <div className="font-display font-bold text-lg sm:text-xl md:text-2xl tracking-wide uppercase text-white leading-tight">
-            <span>BUILDING</span>
-            <br />
-            <span>DIGITAL WORLDS</span>
-            <br />
-            <span>WITH CODE &amp; AI</span>
-          </div>
-
-          <div className="flex items-center gap-3 text-white/50 text-[10px] md:text-[11px] font-mono">
-            <span className="w-8 h-px bg-white/20 hidden md:inline-block" />
-            <span className="tracking-widest">DHRUV SAVALIYA</span>
-          </div>
-
-          {/* Audio Visualizer Toggle */}
-          <div className="mt-1">
-            <SoundIndicator />
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

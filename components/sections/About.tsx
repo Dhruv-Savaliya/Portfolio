@@ -1,118 +1,125 @@
 'use client';
 
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect } from 'react';
+import { gsap, ScrollTrigger } from '@/lib/gsap-init';
 import { useExperienceStore } from '@/lib/store';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 export default function About() {
   const sectionRef = useRef<HTMLElement>(null);
-  const [inView, setInView] = useState(false);
+  const leftColRef = useRef<HTMLDivElement>(null);
+  const rightColRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+
   const setCoreMorphTarget = useExperienceStore((s) => s.setCoreMorphTarget);
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setInView(true);
-          setCoreMorphTarget('about');
-        }
-      },
-      { threshold: 0.25 }
-    );
+    if (!sectionRef.current) return;
 
-    if (sectionRef.current) observer.observe(sectionRef.current);
-    return () => observer.disconnect();
-  }, [setCoreMorphTarget]);
+    const morphTrigger = ScrollTrigger.create({
+      trigger: sectionRef.current,
+      start: 'top 55%',
+      onEnter: () => setCoreMorphTarget('about'),
+      onLeaveBack: () => setCoreMorphTarget('smartreceipt'),
+    });
+
+    if (prefersReducedMotion) {
+      [leftColRef.current, rightColRef.current].forEach((el) => {
+        if (el) { el.style.opacity = '1'; el.style.transform = 'none'; }
+      });
+      return () => morphTrigger.kill();
+    }
+
+    gsap.set([leftColRef.current, rightColRef.current], { opacity: 0, y: 40 });
+    gsap.set(titleRef.current, { clipPath: 'inset(0 100% 0 0)', opacity: 0 });
+
+    const titleAnim = gsap.to(titleRef.current, {
+      clipPath: 'inset(0 0% 0 0)',
+      opacity: 1,
+      duration: 1.0,
+      ease: 'expo.out',
+      scrollTrigger: {
+        trigger: titleRef.current,
+        start: 'top 80%',
+      },
+    });
+
+    const leftAnim = gsap.to(leftColRef.current, {
+      opacity: 1,
+      y: 0,
+      duration: 0.9,
+      ease: 'expo.out',
+      scrollTrigger: {
+        trigger: leftColRef.current,
+        start: 'top 78%',
+      },
+    });
+
+    const rightAnim = gsap.to(rightColRef.current, {
+      opacity: 1,
+      y: 0,
+      duration: 0.9,
+      ease: 'expo.out',
+      delay: 0.15,
+      scrollTrigger: {
+        trigger: rightColRef.current,
+        start: 'top 78%',
+      },
+    });
+
+    return () => {
+      morphTrigger.kill();
+      titleAnim.scrollTrigger?.kill();
+      leftAnim.scrollTrigger?.kill();
+      rightAnim.scrollTrigger?.kill();
+    };
+  }, [setCoreMorphTarget, prefersReducedMotion]);
 
   return (
     <section
       ref={sectionRef}
       id="about"
-      className="relative px-[5vw] py-[20vh] border-t border-ds-border overflow-hidden transition-all duration-700 ease-expo-out"
-      style={{
-        opacity: inView ? 1 : 0.4,
-        transform: inView ? 'translateY(0)' : 'translateY(20px)',
-      }}
+      className="relative px-[5vw] py-[18vh] border-t border-white/10 overflow-hidden bg-[#0A0C10]"
       aria-label="About Dhruv Savaliya"
     >
-      {/* Telemetry Header */}
-      <div className="flex items-center gap-6 mb-12">
-        <span className="text-label-mono text-ds-blue-highlight text-xs font-mono tracking-widest">
-          04 // IDENTITY & PHILOSOPHY
+      {/* Top Telemetry Header */}
+      <div className="flex items-center gap-4 mb-8">
+        <span className="text-[10px] md:text-xs tracking-[0.25em] text-white/50 uppercase font-mono">
+          04 / 06 - ABOUT
         </span>
-        <div className="flex-1 h-px bg-ds-border" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-start">
-        {/* Left Column: Bold Editorial Typography */}
-        <div className="lg:col-span-8 space-y-8 select-none">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-24 items-start">
+        {/* Left Column: Typography */}
+        <div ref={leftColRef} className="flex flex-col gap-6 max-w-xl">
           <h2
-            className="font-display font-bold text-ds-text tracking-tighter leading-none"
-            style={{
-              fontSize: 'clamp(2.6rem, 6vw, 7.5rem)',
-              lineHeight: 0.9,
-              letterSpacing: '-0.04em',
-            }}
+            ref={titleRef}
+            className="font-display font-medium text-white tracking-tight leading-[1.1]"
+            style={{ fontSize: 'clamp(2rem, 4vw, 3rem)' }}
           >
-            <span>I&apos;M DHRUV.</span>
+            I'm Dhruv,
             <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-ds-blue-highlight to-ds-blue">
-              FULL-STACK DEVELOPER
-            </span>
+            Full-Stack Developer
             <br />
-            <span>INTERESTED IN AI,</span>
+            interested in AI &amp;
             <br />
-            <span className="text-ds-text-muted">
-              PRODUCTS &amp; INTERACTIVE WEB.
-            </span>
+            Interactive Web.
           </h2>
 
-          {/* Concise Supporting Copy */}
-          <div className="space-y-4 max-w-2xl text-ds-text-muted font-body text-base md:text-lg leading-relaxed pt-4">
-            <p>
-              Based in Surat, India, I build modern web applications where robust engineering meets
-              cinematic craft. My focus centers on full-stack architecture, high-performance interactive 3D,
-              and integrating artificial intelligence into functional software systems.
-            </p>
-            <p>
-              Rather than assembling templates, I design from fundamental systems: data isolation, deterministic
-              APIs, clean accessibility, and visual pacing that respects the human on the other side of the glass.
-            </p>
+          <p className="font-body text-white/60 text-sm leading-relaxed max-w-md mt-4">
+            I love turning ideas into real products. I enjoy working with modern technologies, exploring 3D, and building seamless user experiences.
+          </p>
+
+          <div className="flex items-center gap-4 mt-4">
+            <a href="#contact" className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full border border-white/20 hover:border-white/40 bg-transparent text-xs tracking-widest text-white transition-colors cursor-none">
+              LET'S CONNECT ↗
+            </a>
           </div>
         </div>
 
-        {/* Right Column: High-Level Signals */}
-        <div className="lg:col-span-4 space-y-6">
-          <div className="p-6 rounded-2xl border border-ds-border bg-ds-surface/60 backdrop-blur-md space-y-4">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-ds-signal animate-pulse" />
-              <span className="text-label-mono text-ds-signal text-xs font-semibold">
-                AVAILABLE FOR ROLES &amp; PROJECTS
-              </span>
-            </div>
-            <p className="font-mono text-xs text-ds-text-muted leading-relaxed">
-              Open to engineering challenges across Next.js, full-stack web products, and interactive interfaces.
-            </p>
-          </div>
-
-          <div className="p-6 rounded-2xl border border-ds-border bg-ds-surface/40 space-y-3 font-mono text-xs">
-            <div className="flex justify-between border-b border-ds-border/60 pb-2">
-              <span className="text-ds-text-dim">LOCATION</span>
-              <span className="text-ds-text">Surat, Gujarat, India</span>
-            </div>
-            <div className="flex justify-between border-b border-ds-border/60 pb-2">
-              <span className="text-ds-text-dim">DEGREE</span>
-              <span className="text-ds-text">BCA (Graduated 2026)</span>
-            </div>
-            <div className="flex justify-between border-b border-ds-border/60 pb-2">
-              <span className="text-ds-text-dim">LANGUAGES</span>
-              <span className="text-ds-text">TypeScript, JavaScript, Python</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-ds-text-dim">FOCUS</span>
-              <span className="text-ds-blue-highlight">Next.js / AI / WebGL</span>
-            </div>
-          </div>
-        </div>
+        {/* Right Column: Empty space for 3D Neural Node */}
+        <div ref={rightColRef} className="hidden md:block w-full h-[500px]" aria-hidden="true" />
       </div>
     </section>
   );

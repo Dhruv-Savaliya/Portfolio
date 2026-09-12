@@ -37,7 +37,7 @@ const syne = Syne({
 // METADATA
 // ============================================
 export const metadata: Metadata = {
-  title: 'Dhruv Savaliya — Full Stack Developer',
+  title: 'Dhruv Savaliya — Full Stack / AI / 3D Web Developer',
   description:
     'Full-stack developer specializing in Next.js, React, TypeScript, Node.js and AI-powered applications. Building digital products that combine code, AI & interaction.',
   keywords: [

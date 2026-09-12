@@ -1,30 +1,93 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
+import gsap from 'gsap';
 import { useExperienceStore } from '@/lib/store';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 // ============================================
 // HERO SECTION COMPONENT
 // ============================================
-export default function Hero() {
-  const [visible, setVisible] = useState(false);
+interface HeroProps {
+  transitionStarted?: boolean;
+}
+
+export default function Hero({ transitionStarted = false }: HeroProps) {
   const sectionRef = useRef<HTMLElement>(null);
+  const titleLineARef = useRef<HTMLSpanElement>(null);
+  const titleLineBRef = useRef<HTMLParagraphElement>(null);
+  const metaTopRef = useRef<HTMLDivElement>(null);
+  const subTitleRef = useRef<HTMLDivElement>(null);
+  const scrollCueRef = useRef<HTMLDivElement>(null);
+  const hasAnimatedRef = useRef(false);
+
   const setCoreMorphTarget = useExperienceStore((s) => s.setCoreMorphTarget);
+  const prefersReducedMotion = useReducedMotion();
 
+  // ── GSAP Entry Timeline (fires when preloader starts its exit)
   useEffect(() => {
-    // Reveal animation
-    const timer = setTimeout(() => {
-      setVisible(true);
-      setCoreMorphTarget('hero');
-    }, 150);
-    return () => clearTimeout(timer);
-  }, [setCoreMorphTarget]);
+    if (!transitionStarted || hasAnimatedRef.current) return;
+    hasAnimatedRef.current = true;
+    setCoreMorphTarget('hero');
 
-  const enterStyle = (delay: number) => ({
-    opacity: visible ? 1 : 0,
-    transform: visible ? 'translateY(0)' : 'translateY(36px)',
-    transition: `opacity 1.1s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s, transform 1.1s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`,
-  });
+    if (prefersReducedMotion) {
+      // Simple instant reveal for reduced motion
+      [
+        titleLineARef.current,
+        titleLineBRef.current,
+        metaTopRef.current,
+        subTitleRef.current,
+        scrollCueRef.current,
+      ].forEach((el) => {
+        if (el) {
+          el.style.opacity = '1';
+          el.style.transform = 'translateY(0)';
+        }
+      });
+      return;
+    }
+
+    const tl = gsap.timeline({ delay: 0.5 });
+
+    // Initial state — hidden below
+    gsap.set(
+      [
+        titleLineARef.current,
+        titleLineBRef.current,
+        metaTopRef.current,
+        subTitleRef.current,
+        scrollCueRef.current,
+      ],
+      { opacity: 0, y: 48 }
+    );
+
+    // ── Staggered cinematic reveal
+    tl.to(
+      titleLineARef.current,
+      { opacity: 1, y: 0, duration: 1.1, ease: 'expo.out' },
+      0
+    )
+      .to(
+        titleLineBRef.current,
+        { opacity: 1, y: 0, duration: 1.1, ease: 'expo.out' },
+        0.12
+      )
+      .to(
+        metaTopRef.current,
+        { opacity: 1, y: 0, duration: 0.9, ease: 'expo.out' },
+        0.3
+      )
+      .to(
+        subTitleRef.current,
+        { opacity: 1, y: 0, duration: 0.9, ease: 'expo.out' },
+        0.45
+      )
+      .to(
+        scrollCueRef.current,
+        { opacity: 1, y: 0, duration: 0.8, ease: 'expo.out' },
+        0.6
+      );
+  }, [transitionStarted, setCoreMorphTarget, prefersReducedMotion]);
 
   return (
     <section
@@ -34,71 +97,57 @@ export default function Hero() {
       style={{ minHeight: '100svh' }}
       aria-label="Hero — Dhruv Savaliya, Full-Stack Developer"
     >
-      {/* Top Metadata Row */}
-      <div className="flex items-start justify-between z-20">
-        {/* Location Telemetry */}
-        <div style={enterStyle(0.3)}>
-          <p className="text-label-mono text-ds-text-dim text-[11px] mb-1 tracking-widest">
-            LOCATION
-          </p>
-          <p className="text-label-mono text-ds-text tracking-widest">
-            SURAT / INDIA
-          </p>
-        </div>
-
-        {/* Discipline Telemetry */}
-        <div className="text-right" style={enterStyle(0.4)}>
-          <p className="text-label-mono text-ds-text-dim text-[11px] mb-1 tracking-widest">
-            CORE DISCIPLINE
-          </p>
-          <p className="text-label-mono text-ds-blue-highlight tracking-widest">
-            FULL-STACK / AI / 3D
-          </p>
-        </div>
-      </div>
-
-      {/* Center / Bottom Composition: Massive Editorial Typography */}
-      <div className="my-auto py-10 z-20">
-        <div className="overflow-hidden">
-          <h1
-            className="font-display font-bold text-ds-text select-none"
-            style={{
-              fontSize: 'clamp(4.2rem, 15vw, 17.5rem)',
-              lineHeight: 0.86,
-              letterSpacing: '-0.05em',
-              ...enterStyle(0.2),
-            }}
-          >
-            <span>DHRUV</span>
-            <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-ds-text via-ds-blue-highlight to-ds-blue">
-              SAVALIYA
-            </span>
-          </h1>
-        </div>
-
-        {/* Secondary Title + Supporting Manifesto */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mt-8 pt-8 border-t border-ds-border">
-          <div style={enterStyle(0.5)} className="max-w-xl">
-            <p className="text-label-mono text-ds-blue-highlight text-xs mb-2 tracking-widest uppercase font-semibold">
-              FULL-STACK DEVELOPER
-            </p>
-            <p className="font-display text-lg md:text-2xl text-ds-text font-normal tracking-tight leading-snug">
-              I BUILD DIGITAL PRODUCTS WITH CODE, AI & INTERACTION.
-            </p>
+      {/* Bottom Composition: Glass Panel */}
+      <div className="absolute bottom-[5vh] left-[5vw] right-[5vw] z-20">
+        <div
+          className="flex flex-col md:flex-row items-center justify-between p-8 md:p-12 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-2xl"
+          style={{
+            boxShadow: '0 20px 40px -10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)'
+          }}
+        >
+          <div className="text-center md:text-left">
+            <div className="overflow-hidden mb-2">
+              <h1
+                className="font-display font-bold text-white tracking-tight"
+                style={{
+                  fontSize: 'clamp(2.5rem, 6vw, 4.5rem)',
+                  lineHeight: 0.9,
+                }}
+              >
+                <span
+                  ref={titleLineARef}
+                  className="block"
+                  style={{ opacity: 0, transform: 'translateY(30px)' }}
+                >
+                  DHRUV SAVALIYA
+                </span>
+              </h1>
+            </div>
+            
+            <div className="overflow-hidden">
+              <p
+                ref={titleLineBRef}
+                className="font-display font-semibold text-ds-text-muted tracking-wider text-lg md:text-2xl uppercase"
+                style={{ opacity: 0, transform: 'translateY(30px)' }}
+              >
+                FULL-STACK DEVELOPER
+              </p>
+            </div>
           </div>
 
           {/* Scroll Callout CTA */}
-          <div style={enterStyle(0.7)} className="flex items-center gap-3">
+          <div
+            ref={scrollCueRef}
+            className="mt-6 md:mt-0 flex items-center justify-center"
+            style={{ opacity: 0, transform: 'translateY(30px)' }}
+          >
             <a
               href="#intro"
-              className="group inline-flex items-center gap-3 px-5 py-3 rounded-full border border-ds-border hover:border-ds-blue-highlight/50 bg-ds-surface/60 backdrop-blur-md transition-all duration-300 cursor-none"
+              className="group inline-flex items-center gap-3 text-xs tracking-widest text-white/50 hover:text-white transition-colors cursor-none"
               aria-label="Scroll down to explore the experience"
             >
-              <span className="text-label-mono text-ds-text-muted group-hover:text-ds-text text-xs tracking-widest transition-colors">
-                SCROLL TO EXPLORE
-              </span>
-              <span className="text-ds-blue-highlight group-hover:translate-y-1 transition-transform duration-300 font-mono text-sm">
+              <span>SCROLL TO EXPLORE</span>
+              <span className="group-hover:translate-y-1 transition-transform duration-300 font-mono text-sm">
                 ↓
               </span>
             </a>

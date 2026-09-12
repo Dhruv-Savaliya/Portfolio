@@ -3,6 +3,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useLenis } from '@/hooks/useLenis';
+// Register GSAP plugins once on client side
+import '@/lib/gsap-init';
 
 // ── Sections ──────────────────────────────────────────────
 import Navigation from '@/components/sections/Navigation';
@@ -41,11 +43,19 @@ function GrainOverlay() {
 // ── Main Page ──────────────────────────────────────────────
 export default function Home() {
   const [preloaderDone, setPreloaderDone] = useState(false);
+  // transitionStarted fires earlier — when the exit animation *begins*
+  // so the hero & 3D Core can start mounting/fading beneath the loader
+  const [transitionStarted, setTransitionStarted] = useState(false);
   const [mouseX, setMouseX] = useState(0);
   const [mouseY, setMouseY] = useState(0);
 
   // Initialize Lenis smooth scroll synchronized with GSAP
   useLenis();
+
+  const handleTransitionStart = useCallback(() => {
+    // Start showing the 3D canvas & hero layout as loader begins its exit
+    setTransitionStarted(true);
+  }, []);
 
   const handlePreloaderComplete = useCallback(() => {
     setPreloaderDone(true);
@@ -72,41 +82,55 @@ export default function Home() {
       {/* Responsive Custom Cursor */}
       <CustomCursor />
 
-      {/* Preloader — tracks genuine asset readiness */}
-      {!preloaderDone && <Preloader onComplete={handlePreloaderComplete} />}
+      {/* Preloader — tracks genuine asset readiness, cinematic GSAP exit */}
+      {!preloaderDone && (
+        <Preloader
+          onComplete={handlePreloaderComplete}
+          onTransitionStart={handleTransitionStart}
+        />
+      )}
 
-      {/* Persistent 3D Digital Core Canvas (Fixed Background) */}
+      {/* Persistent 3D Digital Core Canvas (Fixed Background)
+          Mounts as soon as transition starts so it fades in beneath the exiting loader */}
       <div
-        className="fixed inset-0 pointer-events-none z-0 transition-opacity duration-1000 ease-expo-out"
-        style={{ opacity: preloaderDone ? 1 : 0 }}
+        className="fixed inset-0 pointer-events-none z-0"
+        style={{
+          opacity: transitionStarted ? 1 : 0,
+          transition: transitionStarted
+            ? 'opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.3s'
+            : 'none',
+        }}
         aria-hidden="true"
       >
         <Experience mouseX={mouseX} mouseY={mouseY} coreScale={1.0} />
       </div>
 
-      {/* Main Experience DOM Layers */}
+      {/* Skip to content — accessibility */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999] focus:px-4 focus:py-2 focus:bg-ds-blue focus:text-white focus:font-mono focus:text-xs focus:rounded-full"
+      >
+        Skip to main content
+      </a>
+
+      {/* Main Experience DOM Layers — reveal when transition starts (not just when preloader is gone)
+          so the hero text animates in during the cinematic exit */}
       <main
         id="main-content"
         className="relative z-10 select-text"
         style={{
-          opacity: preloaderDone ? 1 : 0,
-          transition: 'opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
+          opacity: transitionStarted ? 1 : 0,
+          transition: transitionStarted
+            ? 'opacity 1.0s cubic-bezier(0.16, 1, 0.3, 1) 0.5s'
+            : 'none',
         }}
         aria-label="Dhruv Savaliya — Full-Stack Developer Portfolio"
       >
-        {/* Accessibility Skip Link */}
-        <a
-          href="#main-content"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999] focus:px-4 focus:py-2 focus:bg-ds-blue focus:text-white focus:font-mono focus:text-xs focus:rounded-full"
-        >
-          Skip to main content
-        </a>
-
         {/* Minimal Fixed Navigation */}
         <Navigation />
 
         {/* Scene 01: Hero Composition */}
-        <Hero />
+        <Hero transitionStarted={transitionStarted} />
 
         {/* Scene 02: Editorial Manifesto */}
         <Intro />
