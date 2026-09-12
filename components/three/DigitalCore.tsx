@@ -86,7 +86,6 @@ interface DigitalCoreProps {
 export default function DigitalCore({
   mouseX = 0,
   mouseY = 0,
-  _scale = 1,
 }: DigitalCoreProps) {
   const mainGroupRef = useRef<THREE.Group>(null);
   
