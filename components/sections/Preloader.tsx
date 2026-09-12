@@ -211,6 +211,7 @@ export default function Preloader({ onComplete, onTransitionStart }: PreloaderPr
   const svgOverlayRef = useRef<SVGSVGElement>(null);
 
   const [displayProgress, setDisplayProgress] = useState(0);
+  const [activePopupIndex, setActivePopupIndex] = useState(0);
   const targetProgressRef = useRef(15);
   const exitStartedRef = useRef(false);
   const { play } = useSound();
@@ -583,11 +584,11 @@ export default function Preloader({ onComplete, onTransitionStart }: PreloaderPr
 
   // Sub-telemetry percentages derived from overall progress
   const fontProgress    = Math.min(100, Math.round(displayProgress * 1.15));
-  const _imageProgress   = Math.min(100, Math.round(displayProgress * 1.08));
+  // const _imageProgress   = Math.min(100, Math.round(displayProgress * 1.08));
   const assets3dProgress = Math.min(100, Math.round(displayProgress * 0.95));
   const textureProgress = Math.min(100, Math.round(displayProgress * 0.92));
   const webglProgress   = Math.min(100, Math.round(displayProgress * 0.88));
-  const _appAssetsProgress = Math.min(100, Math.round(displayProgress * 0.85));
+  // const _appAssetsProgress = Math.min(100, Math.round(displayProgress * 0.85));
 
   return (
     <div
@@ -710,6 +711,15 @@ export default function Preloader({ onComplete, onTransitionStart }: PreloaderPr
           </div>
         </div>
       </div>
+
+      {/* ── BOTTOM RIGHT: TELEMETRY ────────────────────────────────── */}
+      <div ref={hudBottomRef} className="absolute bottom-8 right-8 z-20 text-right pointer-events-none">
+        <div ref={popupRef} className="hud-popup font-mono text-[10px] md:text-xs flex flex-col items-end">
+          <div className="text-[#B8FF5A] mb-1 tracking-wider">{popups[activePopupIndex]?.code}</div>
+          <div className="text-white/40 tracking-wider">{popups[activePopupIndex]?.loc}</div>
+        </div>
+      </div>
     </div>
   );
 }
+
