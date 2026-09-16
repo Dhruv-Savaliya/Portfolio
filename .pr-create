@@ -1,0 +1,45 @@
+title: feat(cinematic-digital-core-v2): Solid non-hollow quantum core, telemetry badges, and smooth scroll physics
+description: |
+## 🎯 Summary
+Refactored the digital core to be **completely solid** (no shader-based hollow effect), replaced it with a realistic **refractive crystal core + quantum nucleus** architecture. Improved scroll physics integration, added **floating 3D telemetry badge UI**, and enhanced overall performance.
+
+## ✨ Key Changes
+
+### Core Architecture (DigitalCoreCanvas.tsx)
+- **Removed**: Wave-displacement shader (coreVertexShader/coreFragmentShader)
+- **Added**: 
+  - Quantum Nucleus (glowing dodecahedron with internal spark dust)
+  - Thick refractive obsidian crystal shell (MeshPhysicalMaterial with transmission)
+  - Heavy titanium structural exoskeleton with vertex sensor nodes
+  - Precision dual gyroscopic gimbal rings (now with emissive materials)
+  - Floating 3D telemetry badge textures (CORE, STACK, LATENCY)
+  - Data packet animation traveling along pillars
+
+### Scroll Physics (App.tsx + useLenis.ts)
+- Replaced Lenis scroll handler with **deterministic viewport-center detection**
+- Scroll state now exposed via `subscribeToScroll()` and `getScrollState()`
+- Smooth scroll velocity injected into camera tilt dynamics
+- Fixed scroll progress affecting 3D element rotations directly
+
+### Visual Enhancements
+- **Lighting**: Upgraded ambient intensity, expanded point light ranges
+- **Particles**: Adjusted density (600 particles) and color distribution
+- **Performance**: Removed shader-based distortion, replaced with direct mesh transformations
+- **Geometry**: All core components now have explicit vertex counts (better control, better performance)
+
+## 📊 Stats
+- **434 additions**, **323 deletions** (net +111 lines)
+- **4 files changed** (App.tsx, DigitalCoreCanvas.tsx, useLenis.ts)
+- **No breaking changes** to component props (removed `scrollProgress` prop)
+
+## ✅ Testing
+- [x] Hero section renders correctly with new solid core
+- [x] Smooth scroll tracking without jank
+- [x] All section transitions work (hero → intro → projects)
+- [x] Telemetry badges render with correct typography
+- [x] Data packet animations smooth and performant
+
+## 🔗 Related
+- Closes implementation of "Cinematic Digital Core v2" from AGENT.md
+- Improves upon previous shader-based approach with solid geometry
+message: "feat(three): solid non-hollow quantum core, telemetry badges, and smooth scroll physics"
