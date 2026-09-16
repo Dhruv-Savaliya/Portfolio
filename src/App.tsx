@@ -19,22 +19,14 @@ export default function App() {
   const [isPreloaderComplete, setIsPreloaderComplete] = useState(false);
   const [activeSection, setActiveSection] = useState<CoreMorphTarget>('hero');
   const [isModelSpecOpen, setIsModelSpecOpen] = useState(false);
-  const [scrollProgress, setScrollProgress] = useState(0);
-
-  // Smooth Lenis Scroll Handler
-  const handleScrollProgress = useCallback((progress: number) => {
-    setScrollProgress(progress);
-  }, []);
-
-  useLenis(handleScrollProgress);
   
   // 3D Core Interactive Controls
   const [wireframe, setWireframe] = useState(false);
   const [speed, setSpeed] = useState(1.0);
   const [distortion, setDistortion] = useState(1.0);
 
-  // Synchronize active section with scroll positions
-  useEffect(() => {
+  // Synchronize active section with scroll positions deterministically
+  const checkActiveSection = useCallback(() => {
     const sectionIds: { id: string; target: CoreMorphTarget }[] = [
       { id: 'hero', target: 'hero' },
       { id: 'intro', target: 'intro' },
@@ -49,30 +41,37 @@ export default function App() {
       { id: 'footer', target: 'footer' },
     ];
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const match = sectionIds.find((s) => s.id === entry.target.id);
-            if (match) {
-              setActiveSection(match.target);
-            }
-          }
-        });
-      },
-      {
-        rootMargin: '-20% 0px -40% 0px',
-        threshold: 0.1,
-      }
-    );
+    const viewportCenter = window.innerHeight * 0.45;
+    let closestTarget: CoreMorphTarget = 'hero';
+    let minDistance = Infinity;
 
-    sectionIds.forEach(({ id }) => {
+    for (const { id, target } of sectionIds) {
       const el = document.getElementById(id);
-      if (el) observer.observe(el);
-    });
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        // Check if element overlaps viewport center
+        if (rect.top <= viewportCenter && rect.bottom >= viewportCenter) {
+          closestTarget = target;
+          break;
+        }
+        const dist = Math.min(Math.abs(rect.top - viewportCenter), Math.abs(rect.bottom - viewportCenter));
+        if (dist < minDistance) {
+          minDistance = dist;
+          closestTarget = target;
+        }
+      }
+    }
 
-    return () => observer.disconnect();
-  }, [isPreloaderComplete]);
+    setActiveSection((prev) => (prev !== closestTarget ? closestTarget : prev));
+  }, []);
+
+  useLenis(checkActiveSection);
+
+  useEffect(() => {
+    checkActiveSection();
+    window.addEventListener('scroll', checkActiveSection, { passive: true });
+    return () => window.removeEventListener('scroll', checkActiveSection);
+  }, [checkActiveSection, isPreloaderComplete]);
 
   return (
     <div className="relative min-h-screen bg-[#040711] text-slate-100 selection:bg-cyan-500/30 selection:text-cyan-200">
@@ -87,7 +86,6 @@ export default function App() {
         wireframeOverride={wireframe}
         speedMultiplier={speed}
         distortionMultiplier={distortion}
-        scrollProgress={scrollProgress}
       />
 
       {/* Sticky Cinematic Navigation */}
