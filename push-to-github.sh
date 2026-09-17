@@ -2,19 +2,19 @@
 # Autonomous script to stage, commit, and push all updates directly to Dhruv-Savaliya/Portfolio
 set -euo pipefail
 
-echo "=========================================================="
-echo "  DHRUV SAVALIYA // PORTFOLIO AUTONOMOUS GITHUB PUSH"
-echo "=========================================================="
+# Auto-load GITHUB_TOKEN from .env or .env.local if present
+if [ -f .env ]; then
+  export $(grep -E '^GITHUB_TOKEN=' .env | xargs) 2>/dev/null || true
+fi
+if [ -f .env.local ]; then
+  export $(grep -E '^GITHUB_TOKEN=' .env.local | xargs) 2>/dev/null || true
+fi
 
 TOKEN="${1:-${GITHUB_TOKEN:-}}"
 
-if [ -z "$TOKEN" ]; then
-  echo "Usage:"
-  echo "  ./push-to-github.sh <YOUR_GITHUB_PERSONAL_ACCESS_TOKEN>"
-  echo "  or export GITHUB_TOKEN=ghp_... and run ./push-to-github.sh"
-  echo ""
-  echo "Current status: Staging and creating local commit..."
-fi
+echo "=========================================================="
+echo "  DHRUV SAVALIYA // PORTFOLIO AUTONOMOUS GITHUB PUSH"
+echo "=========================================================="
 
 # Configure Git User
 git config user.name "Dhruv Savaliya"
@@ -23,30 +23,39 @@ git config user.email "dhruvsavaliya075@gmail.com"
 # Stage all files
 git add -A
 
-# Check for staged changes
-if git diff --staged --quiet; then
-  echo "==> No unstaged changes detected. Working tree is clean."
-else
-  COMMIT_MSG="feat: complete cinematic glassmorphism portfolio with responsive 3D core, dark/light theme, and vercel deployment"
+# Check for staged changes and commit if needed
+if ! git diff --staged --quiet; then
+  COMMIT_MSG="feat: update portfolio components, responsive 3D core, and production build"
   git commit -m "$COMMIT_MSG"
-  echo "==> Successfully committed: $COMMIT_MSG"
+  echo "==> Staged changes committed: $COMMIT_MSG"
+else
+  echo "==> Working tree clean. Ready to sync commits."
 fi
 
-# If token provided, set authenticated remote and push
+# Check if authenticated push can proceed
 if [ -n "$TOKEN" ]; then
-  echo "==> Authenticating remote with provided token..."
+  echo "==> Authenticating remote with GitHub token..."
   git remote set-url origin "https://Dhruv-Savaliya:${TOKEN}@github.com/Dhruv-Savaliya/Portfolio.git"
-  echo "==> Pushing to origin/main..."
+  echo "==> Pushing commits to origin/main..."
   git push origin main
-  # Reset remote url to avoid leaking token in config
+  # Reset remote url to clean public url
   git remote set-url origin "https://github.com/Dhruv-Savaliya/Portfolio.git"
-  echo "==> PUSH COMPLETED SUCCESSFULLY TO GITHUB!"
-  echo "==> Vercel auto-deployment triggered on main branch."
+  echo ""
+  echo "=========================================================="
+  echo "  SUCCESS: COMMITS PUSHED AUTONOMOUSLY TO GITHUB!"
+  echo "  Vercel production deployment initiated on main."
+  echo "=========================================================="
 else
   echo ""
   echo "=========================================================="
-  echo "  LOCAL COMMIT CREATED SUCCESSFULLY!"
-  echo "  To push to GitHub, run:"
-  echo "  ./push-to-github.sh <YOUR_GITHUB_TOKEN>"
+  echo "  STATUS: LOCAL COMMITS READY (AHEAD OF ORIGIN/MAIN)"
+  echo ""
+  echo "  GitHub authentication is required to push to remote:"
+  echo "  Option 1: Run with token:"
+  echo "    ./push-to-github.sh <YOUR_GITHUB_TOKEN>"
+  echo "  Option 2: Export token:"
+  echo "    export GITHUB_TOKEN=ghp_... && ./push-to-github.sh"
+  echo "  Option 3: Save to .env (git-ignored):"
+  echo "    echo 'GITHUB_TOKEN=ghp_...' >> .env"
   echo "=========================================================="
 fi
