@@ -1,878 +1,629 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { useStore } from '../../lib/store';
 import { CoreMorphTarget } from '../../types';
-import { sound } from '../../lib/audio';
-import { subscribeToScroll, getScrollState } from '../../hooks/useLenis';
 
-interface DigitalCoreCanvasProps {
-  activeSection: CoreMorphTarget;
-  wireframeOverride?: boolean;
-  speedMultiplier?: number;
-  distortionMultiplier?: number;
-  onModelLoaded?: () => void;
-}
-
-// Morph Target World Coordinates (Podium / Reference spec)
-interface TransformState {
-  pos: [number, number, number];
+interface MorphParameters {
+  coreRadius: number;
+  nodeSpread: number;
   rotSpeed: number;
+  distortion: number;
+  signalStrength: number;
+  colorRim: THREE.Color;
+  colorSignal: THREE.Color;
+  scanlineIntensity: number;
+  ringsRadius: number;
+  wireframeOpacity: number;
+  posXDesktop: number;
+  posYDesktop: number;
 }
 
-const MORPH_STATES: Record<CoreMorphTarget, TransformState> = {
-  hero: { pos: [0, 0, 0], rotSpeed: 0.0035 },
-  intro: { pos: [1.35, 0, -0.6], rotSpeed: 0.0025 },
-  bizdhan: { pos: [1.25, 0.2, -0.3], rotSpeed: 0.004 },
-  clearclaim: { pos: [-1.25, 0.2, -0.3], rotSpeed: 0.0035 },
-  smartreceipt: { pos: [1.25, 0.2, -0.3], rotSpeed: 0.005 },
-  howibuild: { pos: [0, 0, -0.5], rotSpeed: 0.003 },
-  about: { pos: [-1.2, 0.15, -0.4], rotSpeed: 0.0025 },
-  experience: { pos: [0, 0, -0.8], rotSpeed: 0.002 },
-  technology: { pos: [0, 0, 0], rotSpeed: 0.006 },
-  contact: { pos: [1.35, 0.2, -0.8], rotSpeed: 0.008 },
-  footer: { pos: [0, 0, 0], rotSpeed: 0.0015 },
-  idle: { pos: [0, 0, 0], rotSpeed: 0.003 },
+const SECTION_PARAMS: Record<CoreMorphTarget, MorphParameters> = {
+  hero: {
+    coreRadius: 1.65,
+    nodeSpread: 2.8,
+    rotSpeed: 0.0035,
+    distortion: 0.22,
+    signalStrength: 0.25,
+    colorRim: new THREE.Color('#356DFF'),
+    colorSignal: new THREE.Color('#00F0FF'),
+    scanlineIntensity: 0.18,
+    ringsRadius: 3.2,
+    wireframeOpacity: 0.3,
+    posXDesktop: 2.2, // Right column in Hero layout
+    posYDesktop: 0.1,
+  },
+  intro: {
+    coreRadius: 1.4,
+    nodeSpread: 2.2,
+    rotSpeed: 0.002,
+    distortion: 0.12,
+    signalStrength: 0.1,
+    colorRim: new THREE.Color('#356DFF'),
+    colorSignal: new THREE.Color('#00E5FF'),
+    scanlineIntensity: 0.1,
+    ringsRadius: 2.6,
+    wireframeOpacity: 0.2,
+    posXDesktop: 1.8,
+    posYDesktop: 0.0,
+  },
+  bizdhan: {
+    coreRadius: 1.7,
+    nodeSpread: 3.4,
+    rotSpeed: 0.004,
+    distortion: 0.3,
+    signalStrength: 0.45,
+    colorRim: new THREE.Color('#356DFF'),
+    colorSignal: new THREE.Color('#B8FF5A'),
+    scanlineIntensity: 0.25,
+    ringsRadius: 3.6,
+    wireframeOpacity: 0.35,
+    posXDesktop: -2.0, // Swaps dynamically per section
+    posYDesktop: 0.0,
+  },
+  clearclaim: {
+    coreRadius: 1.55,
+    nodeSpread: 3.2,
+    rotSpeed: 0.0035,
+    distortion: 0.2,
+    signalStrength: 0.35,
+    colorRim: new THREE.Color('#356DFF'),
+    colorSignal: new THREE.Color('#00F0FF'),
+    scanlineIntensity: 0.3,
+    ringsRadius: 3.4,
+    wireframeOpacity: 0.4,
+    posXDesktop: 2.0,
+    posYDesktop: 0.0,
+  },
+  smartreceipt: {
+    coreRadius: 1.6,
+    nodeSpread: 3.0,
+    rotSpeed: 0.0045,
+    distortion: 0.35,
+    signalStrength: 0.5,
+    colorRim: new THREE.Color('#356DFF'),
+    colorSignal: new THREE.Color('#B8FF5A'),
+    scanlineIntensity: 0.4,
+    ringsRadius: 3.3,
+    wireframeOpacity: 0.4,
+    posXDesktop: -2.0,
+    posYDesktop: 0.0,
+  },
+  howibuild: {
+    coreRadius: 1.5,
+    nodeSpread: 2.7,
+    rotSpeed: 0.003,
+    distortion: 0.18,
+    signalStrength: 0.2,
+    colorRim: new THREE.Color('#356DFF'),
+    colorSignal: new THREE.Color('#00F0FF'),
+    ringsRadius: 3.1,
+    scanlineIntensity: 0.2,
+    wireframeOpacity: 0.25,
+    posXDesktop: 1.8,
+    posYDesktop: 0.0,
+  },
+  about: {
+    coreRadius: 1.45,
+    nodeSpread: 2.6,
+    rotSpeed: 0.0025,
+    distortion: 0.15,
+    signalStrength: 0.2,
+    colorRim: new THREE.Color('#356DFF'),
+    colorSignal: new THREE.Color('#B8FF5A'),
+    ringsRadius: 2.9,
+    scanlineIntensity: 0.15,
+    wireframeOpacity: 0.25,
+    posXDesktop: -1.9,
+    posYDesktop: 0.0,
+  },
+  technology: {
+    coreRadius: 1.8,
+    nodeSpread: 3.6,
+    rotSpeed: 0.0045,
+    distortion: 0.3,
+    signalStrength: 0.4,
+    colorRim: new THREE.Color('#356DFF'),
+    colorSignal: new THREE.Color('#00F0FF'),
+    ringsRadius: 3.8,
+    scanlineIntensity: 0.3,
+    wireframeOpacity: 0.35,
+    posXDesktop: 0.0, // Center nucleus in technology section
+    posYDesktop: 0.0,
+  },
+  experience: {
+    coreRadius: 1.5,
+    nodeSpread: 2.8,
+    rotSpeed: 0.003,
+    distortion: 0.18,
+    signalStrength: 0.25,
+    colorRim: new THREE.Color('#356DFF'),
+    colorSignal: new THREE.Color('#356DFF'),
+    ringsRadius: 3.2,
+    scanlineIntensity: 0.2,
+    wireframeOpacity: 0.25,
+    posXDesktop: 2.0,
+    posYDesktop: 0.0,
+  },
+  contact: {
+    coreRadius: 1.6,
+    nodeSpread: 2.9,
+    rotSpeed: 0.002,
+    distortion: 0.12,
+    signalStrength: 0.15,
+    colorRim: new THREE.Color('#356DFF'),
+    colorSignal: new THREE.Color('#00F0FF'),
+    ringsRadius: 3.4,
+    scanlineIntensity: 0.12,
+    wireframeOpacity: 0.25,
+    posXDesktop: 0.0,
+    posYDesktop: 0.2,
+  },
 };
 
-// Helper: Create high-contrast floating 3D HUD chip texture
-function createDataBadgeTexture(label: string, value: string, colorHex: string): THREE.CanvasTexture {
-  const canvas = document.createElement('canvas');
-  canvas.width = 256;
-  canvas.height = 72;
-  const ctx = canvas.getContext('2d')!;
-
-  // Background panel with rounded corners
-  ctx.fillStyle = 'rgba(6, 12, 26, 0.88)';
-  ctx.strokeStyle = colorHex;
-  ctx.lineWidth = 2.5;
-
-  const r = 12;
-  ctx.beginPath();
-  ctx.roundRect(4, 4, 248, 64, r);
-  ctx.fill();
-  ctx.stroke();
-
-  // Status indicator LED
-  ctx.fillStyle = colorHex;
-  ctx.beginPath();
-  ctx.arc(22, 36, 6, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Typography
-  ctx.font = 'bold 18px "Space Grotesk", monospace, sans-serif';
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText(label, 38, 32);
-
-  ctx.font = '14px "Space Grotesk", monospace, sans-serif';
-  ctx.fillStyle = colorHex;
-  ctx.fillText(value, 38, 52);
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.needsUpdate = true;
-  return texture;
-}
-
-export const DigitalCoreCanvas: React.FC<DigitalCoreCanvasProps> = ({
-  activeSection,
-  wireframeOverride = false,
-  speedMultiplier = 1,
-  distortionMultiplier = 1,
-  onModelLoaded,
-}) => {
+export default function DigitalCoreCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [, setModelStatus] = useState<'loading' | 'ready'>('loading');
+  const currentSection = useStore((s) => s.currentSection);
+  const preloaderComplete = useStore((s) => s.preloaderComplete);
+  const mousePos = useStore((s) => s.mousePos);
+  const theme = useStore((s) => s.theme);
 
-  // Three.js References
-  const sceneRef = useRef<THREE.Scene | null>(null);
-  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
-  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  
-  // Model Groups
-  const mainGroupRef = useRef<THREE.Group | null>(null);
-  const heroGroupRef = useRef<THREE.Group | null>(null);
-  const nucleusRef = useRef<THREE.Mesh | null>(null);
-  const crystalShellRef = useRef<THREE.Mesh | null>(null);
-  const ring1Ref = useRef<THREE.Mesh | null>(null);
-  const ring2Ref = useRef<THREE.Mesh | null>(null);
-  
-  // Project Chapter Groups
-  const bizdhanGroupRef = useRef<THREE.Group | null>(null);
-  const clearclaimGroupRef = useRef<THREE.Group | null>(null);
-  const smartReceiptGroupRef = useRef<THREE.Group | null>(null);
-  const aboutGroupRef = useRef<THREE.Group | null>(null);
-  const experienceGroupRef = useRef<THREE.Group | null>(null);
-  const technologyGroupRef = useRef<THREE.Group | null>(null);
-  const footerDGroupRef = useRef<THREE.Group | null>(null);
-  
-  const particlesRef = useRef<THREE.Points | null>(null);
-  const laserRef = useRef<THREE.Mesh | null>(null);
-  const dataPacketsRef = useRef<THREE.Mesh[]>([]);
+  const sectionRef = useRef<CoreMorphTarget>(currentSection);
+  sectionRef.current = currentSection;
 
-  // Physics & Parallax
-  const targetRotation = useRef({ x: 0, y: 0 });
-  const currentRotation = useRef({ x: 0, y: 0 });
-  const currentPosition = useRef(new THREE.Vector3(0, 0, 0));
-  const clockRef = useRef(new THREE.Clock());
-  const activeSectionRef = useRef(activeSection);
-  const scrollStateRef = useRef(getScrollState());
+  const mouseRef = useRef(mousePos);
+  mouseRef.current = mousePos;
+
+  const themeRef = useRef(theme);
+  themeRef.current = theme;
 
   useEffect(() => {
-    activeSectionRef.current = activeSection;
-    sound.morphSoundscape(activeSection);
-  }, [activeSection]);
+    const container = containerRef.current;
+    if (!container) return;
 
-  // Subscribe to Lenis Smooth Scroll without React re-renders
-  useEffect(() => {
-    const unsubscribe = subscribeToScroll((progress, velocity, scroll) => {
-      scrollStateRef.current = { progress, velocity, scroll };
-    });
-    return unsubscribe;
-  }, []);
+    // Check WebGL availability
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true,
+        powerPreference: 'high-performance',
+      });
+    } catch {
+      return;
+    }
 
-  // Main Three.js Scene Setup
-  useEffect(() => {
-    if (!containerRef.current) return;
+    const width = container.clientWidth || window.innerWidth;
+    const height = container.clientHeight || window.innerHeight;
 
-    const width = containerRef.current.clientWidth;
-    const height = containerRef.current.clientHeight;
-
-    // 1. Scene & Camera
-    const scene = new THREE.Scene();
-    sceneRef.current = scene;
-
-    const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100);
-    camera.position.set(0, 0, 6.6);
-    cameraRef.current = camera;
-
-    // 2. High-Performance WebGL Renderer
-    const renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: true,
-      powerPreference: 'high-performance',
-    });
     renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.25;
-    containerRef.current.appendChild(renderer.domElement);
-    rendererRef.current = renderer;
+    renderer.toneMappingExposure = 1.15;
+    container.appendChild(renderer.domElement);
 
-    // 3. Multi-Point Cinematic Studio Lighting (Specular Glints on Crystal)
-    const ambientLight = new THREE.AmbientLight(0x071126, 2.0);
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+    camera.position.set(0, 0, 8.5);
+
+    // Dynamic Lighting adjusted per theme
+    const ambientLight = new THREE.AmbientLight(0xffffff, themeRef.current === 'light' ? 1.1 : 0.7);
     scene.add(ambientLight);
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 1.6);
-    keyLight.position.set(4, 7, 5);
-    scene.add(keyLight);
-
-    const cyanPoint = new THREE.PointLight(0x00f0ff, 5.0, 18);
-    cyanPoint.position.set(3.5, 2.5, 4);
-    scene.add(cyanPoint);
-
-    const bluePoint = new THREE.PointLight(0x356dff, 6.0, 18);
-    bluePoint.position.set(-4, -2.5, -3);
-    scene.add(bluePoint);
-
-    const limeAccent = new THREE.PointLight(0xb8ff5a, 3.2, 14);
-    limeAccent.position.set(2.5, -3.5, 2);
-    scene.add(limeAccent);
-
-    // 4. Background Data Nebula & Quantum Dust (600 Micro-Particles)
-    const particleCount = 600;
-    const particleGeometry = new THREE.BufferGeometry();
-    const particlePositions = new Float32Array(particleCount * 3);
-    const particleColors = new Float32Array(particleCount * 3);
-
-    const colorCyan = new THREE.Color(0x00f0ff);
-    const colorRoyal = new THREE.Color(0x356dff);
-
-    for (let i = 0; i < particleCount; i++) {
-      const radius = 3.2 + Math.random() * 8.5;
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos(2 * Math.random() - 1);
-
-      particlePositions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
-      particlePositions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
-      particlePositions[i * 3 + 2] = radius * Math.cos(phi);
-
-      const mixed = Math.random() > 0.4 ? colorCyan : colorRoyal;
-      particleColors[i * 3] = mixed.r;
-      particleColors[i * 3 + 1] = mixed.g;
-      particleColors[i * 3 + 2] = mixed.b;
-    }
-
-    particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
-    particleGeometry.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
-
-    const particleMaterial = new THREE.PointsMaterial({
-      size: 0.028,
-      vertexColors: true,
-      transparent: true,
-      opacity: 0.65,
-      blending: THREE.AdditiveBlending,
-    });
-
-    const particles = new THREE.Points(particleGeometry, particleMaterial);
-    scene.add(particles);
-    particlesRef.current = particles;
-
-    // 5. Main Hierarchical Centered Group
-    const mainGroup = new THREE.Group();
-    scene.add(mainGroup);
-    mainGroupRef.current = mainGroup;
-
-    // ====================================================
-    // SIGNATURE DIGITAL CORE (HEAVY SOLID OBSIDIAN & REFRACTIVE GLASS)
-    // ====================================================
-    const heroGroup = new THREE.Group();
-    mainGroup.add(heroGroup);
-    heroGroupRef.current = heroGroup;
-
-    // A. Quantum Nucleus (The Glowing Energy Heart inside)
-    const nucleusGeo = new THREE.DodecahedronGeometry(0.72, 1);
-    const nucleusMat = new THREE.MeshStandardMaterial({
-      color: 0x00f0ff,
-      emissive: 0x00f0ff,
-      emissiveIntensity: 1.6,
-      roughness: 0.1,
-      metalness: 0.9,
-    });
-    const nucleus = new THREE.Mesh(nucleusGeo, nucleusMat);
-    heroGroup.add(nucleus);
-    nucleusRef.current = nucleus;
-
-    // Internal Spark Dust inside the core
-    const sparkCount = 60;
-    const sparkGeo = new THREE.BufferGeometry();
-    const sparkPos = new Float32Array(sparkCount * 3);
-    for (let i = 0; i < sparkCount * 3; i += 3) {
-      sparkPos[i] = (Math.random() - 0.5) * 0.9;
-      sparkPos[i + 1] = (Math.random() - 0.5) * 0.9;
-      sparkPos[i + 2] = (Math.random() - 0.5) * 0.9;
-    }
-    sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3));
-    const sparkMat = new THREE.PointsMaterial({
-      size: 0.035,
-      color: 0xb8ff5a,
-      blending: THREE.AdditiveBlending,
-      transparent: true,
-    });
-    const sparkPoints = new THREE.Points(sparkGeo, sparkMat);
-    nucleus.add(sparkPoints);
-
-    // B. Thick Refractive Obsidian Crystal Shell
-    const crystalGeo = new THREE.IcosahedronGeometry(1.22, 2);
-    const crystalMat = new THREE.MeshPhysicalMaterial({
-      color: 0x061124,
-      emissive: 0x030a16,
-      emissiveIntensity: 0.3,
-      roughness: 0.1,
-      metalness: 0.85,
-      clearcoat: 1.0,
-      clearcoatRoughness: 0.05,
-      reflectivity: 0.95,
-      transmission: 0.65,
-      ior: 1.6,
-      thickness: 1.5,
-    });
-    const crystalShell = new THREE.Mesh(crystalGeo, crystalMat);
-    heroGroup.add(crystalShell);
-    crystalShellRef.current = crystalShell;
-
-    // Glowing Edge Geometry for the Crystal Shell
-    const edgeGeo = new THREE.EdgesGeometry(crystalGeo);
-    const edgeMat = new THREE.LineBasicMaterial({
-      color: 0x00f0ff,
-      transparent: true,
-      opacity: 0.7,
-    });
-    const crystalEdges = new THREE.LineSegments(edgeGeo, edgeMat);
-    crystalShell.add(crystalEdges);
-
-    // C. Heavy Outer Titanium Structural Exoskeleton
-    const exoGeo = new THREE.OctahedronGeometry(1.52, 1);
-    const exoMat = new THREE.MeshStandardMaterial({
-      color: 0x1e293b,
-      metalness: 0.95,
-      roughness: 0.15,
-      wireframe: true,
-    });
-    const exoskeleton = new THREE.Mesh(exoGeo, exoMat);
-    heroGroup.add(exoskeleton);
-
-    // Vertex Sensor Nodes (Illuminated micro-sensors at vertices)
-    const nodePosArray = exoGeo.getAttribute('position');
-    for (let i = 0; i < nodePosArray.count; i++) {
-      const vx = nodePosArray.getX(i);
-      const vy = nodePosArray.getY(i);
-      const vz = nodePosArray.getZ(i);
-
-      const sensorGeo = new THREE.BoxGeometry(0.12, 0.12, 0.12);
-      const sensorMat = new THREE.MeshStandardMaterial({
-        color: 0x00f0ff,
-        emissive: 0x00f0ff,
-        emissiveIntensity: 1.2,
-      });
-      const sensor = new THREE.Mesh(sensorGeo, sensorMat);
-      sensor.position.set(vx, vy, vz);
-      heroGroup.add(sensor);
-    }
-
-    // D. Dual Concentric Precision Gyroscopic Gimbal Rings
-    const ring1Geo = new THREE.TorusGeometry(1.95, 0.035, 16, 100);
-    const ring1Mat = new THREE.MeshStandardMaterial({
-      color: 0x0f172a,
-      metalness: 0.95,
-      roughness: 0.15,
-      emissive: 0x00f0ff,
-      emissiveIntensity: 0.45,
-    });
-    const ring1 = new THREE.Mesh(ring1Geo, ring1Mat);
-    ring1.rotation.x = Math.PI / 3;
-    ring1.rotation.y = Math.PI / 5;
-    heroGroup.add(ring1);
-    ring1Ref.current = ring1;
-
-    const ring2Geo = new THREE.TorusGeometry(2.25, 0.022, 16, 100);
-    const ring2Mat = new THREE.MeshStandardMaterial({
-      color: 0x1e1b4b,
-      metalness: 0.95,
-      roughness: 0.15,
-      emissive: 0x356dff,
-      emissiveIntensity: 0.6,
-    });
-    const ring2 = new THREE.Mesh(ring2Geo, ring2Mat);
-    ring2.rotation.x = -Math.PI / 3.5;
-    ring2.rotation.z = Math.PI / 4;
-    heroGroup.add(ring2);
-    ring2Ref.current = ring2;
-
-    // E. 4 Satellite Architecture Pillars (API, DATABASE, AI, UI/UX)
-    const pillars = [
-      { name: 'API', pos: [0, 2.2, 0], color: 0x00f0ff, label: 'REST / WS' },
-      { name: 'DATABASE', pos: [-2.2, 0, 0], color: 0xa855f7, label: 'MONGODB' },
-      { name: 'AI', pos: [2.2, 0, 0], color: 0xb8ff5a, label: 'GROQ / LLM' },
-      { name: 'UI/UX', pos: [0, -2.2, 0], color: 0x38bdf8, label: 'R3F / WEBGL' },
-    ];
-
-    const dataPackets: THREE.Mesh[] = [];
-
-    pillars.forEach((p) => {
-      // Node housing
-      const housing = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.18, 0.18, 0.22, 6),
-        new THREE.MeshStandardMaterial({
-          color: 0x0f172a,
-          metalness: 0.9,
-          roughness: 0.2,
-          emissive: p.color,
-          emissiveIntensity: 0.5,
-        })
-      );
-      housing.position.set(p.pos[0], p.pos[1], p.pos[2]);
-      heroGroup.add(housing);
-
-      // Glowing laser pipeline to center
-      const lineGeo = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(0, 0, 0),
-        new THREE.Vector3(p.pos[0], p.pos[1], p.pos[2]),
-      ]);
-      const line = new THREE.Line(
-        lineGeo,
-        new THREE.LineBasicMaterial({ color: p.color, transparent: true, opacity: 0.55 })
-      );
-      heroGroup.add(line);
-
-      // Data Packet traveling back and forth
-      const packet = new THREE.Mesh(
-        new THREE.SphereGeometry(0.06, 8, 8),
-        new THREE.MeshBasicMaterial({ color: p.color })
-      );
-      heroGroup.add(packet);
-      packet.userData = {
-        origin: new THREE.Vector3(0, 0, 0),
-        target: new THREE.Vector3(p.pos[0], p.pos[1], p.pos[2]),
-        speed: 1.5 + Math.random() * 0.8,
-        phase: Math.random() * Math.PI,
-      };
-      dataPackets.push(packet);
-    });
-
-    dataPacketsRef.current = dataPackets;
-
-    // F. Floating 3D Telemetry Badges (The "Small Floating UI Fragments" from AGENT.md)
-    const badgeConfigs = [
-      { label: 'CORE', value: 'ONLINE 99.9%', color: '#00f0ff', pos: [1.6, 1.3, 0.8] },
-      { label: 'STACK', value: 'FULL-STACK + AI', color: '#b8ff5a', pos: [-1.6, 1.2, 0.6] },
-      { label: 'LATENCY', value: '16ms 60FPS', color: '#356dff', pos: [1.7, -1.2, -0.6] },
-    ];
-
-    badgeConfigs.forEach((b) => {
-      const tex = createDataBadgeTexture(b.label, b.value, b.color);
-      const badgeMat = new THREE.MeshBasicMaterial({
-        map: tex,
-        transparent: true,
-        side: THREE.DoubleSide,
-      });
-      const badgeMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.35), badgeMat);
-      badgeMesh.position.set(b.pos[0], b.pos[1], b.pos[2]);
-      heroGroup.add(badgeMesh);
-    });
-
-    // ====================================================
-    // SUB-SCENE 2: BIZDHAN FINANCIAL MATRIX
-    // ====================================================
-    const bizdhanGroup = new THREE.Group();
-    bizdhanGroup.scale.set(0.001, 0.001, 0.001);
-    mainGroup.add(bizdhanGroup);
-    bizdhanGroupRef.current = bizdhanGroup;
-
-    const barHeights = [0.9, 1.4, 1.1, 1.9, 1.6, 2.4];
-    barHeights.forEach((val, idx) => {
-      const barGeo = new THREE.BoxGeometry(0.34, val, 0.34);
-      const barMat = new THREE.MeshStandardMaterial({
-        color: idx === 5 ? 0x00f0ff : 0x1e3a8a,
-        emissive: idx === 5 ? 0x00f0ff : 0x172554,
-        emissiveIntensity: idx === 5 ? 0.75 : 0.3,
-        roughness: 0.15,
-        metalness: 0.85,
-      });
-      const bar = new THREE.Mesh(barGeo, barMat);
-      bar.position.set((idx - 2.5) * 0.48, val / 2 - 0.9, 0);
-      bizdhanGroup.add(bar);
-
-      const edgeLines = new THREE.LineSegments(
-        new THREE.EdgesGeometry(barGeo),
-        new THREE.LineBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.85 })
-      );
-      edgeLines.position.copy(bar.position);
-      bizdhanGroup.add(edgeLines);
-    });
-
-    const grid = new THREE.GridHelper(4.5, 14, 0x00f0ff, 0x1e40af);
-    grid.position.y = -0.9;
-    bizdhanGroup.add(grid);
-
-    // ====================================================
-    // SUB-SCENE 3: CLEARCLAIM MULTI-TENANT ARCHITECTURE
-    // ====================================================
-    const clearclaimGroup = new THREE.Group();
-    clearclaimGroup.scale.set(0.001, 0.001, 0.001);
-    mainGroup.add(clearclaimGroup);
-    clearclaimGroupRef.current = clearclaimGroup;
-
-    const authHub = new THREE.Mesh(
-      new THREE.BoxGeometry(1.1, 1.1, 1.1),
-      new THREE.MeshStandardMaterial({
-        color: 0x00f0ff,
-        emissive: 0x00f0ff,
-        emissiveIntensity: 0.65,
-        roughness: 0.1,
-        metalness: 0.9,
-      })
-    );
-    clearclaimGroup.add(authHub);
-
-    const tenantOffsets = [
-      [-1.6, 0.9, 0.4],
-      [1.6, 0.9, -0.4],
-      [-1.5, -0.9, -0.4],
-      [1.5, -0.9, 0.4],
-    ];
-
-    tenantOffsets.forEach(([x, y, z]) => {
-      const cube = new THREE.Mesh(
-        new THREE.BoxGeometry(0.58, 0.58, 0.58),
-        new THREE.MeshStandardMaterial({
-          color: 0x356dff,
-          emissive: 0x1d4ed8,
-          emissiveIntensity: 0.5,
-          roughness: 0.2,
-          metalness: 0.85,
-        })
-      );
-      cube.position.set(x, y, z);
-      clearclaimGroup.add(cube);
-
-      const pipe = new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(x, y, z)]),
-        new THREE.LineBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.7 })
-      );
-      clearclaimGroup.add(pipe);
-    });
-
-    // ====================================================
-    // SUB-SCENE 4: SMART RECEIPT SCANNER & OCR
-    // ====================================================
-    const smartReceiptGroup = new THREE.Group();
-    smartReceiptGroup.scale.set(0.001, 0.001, 0.001);
-    smartReceiptGroup.rotation.x = -0.32;
-    mainGroup.add(smartReceiptGroup);
-    smartReceiptGroupRef.current = smartReceiptGroup;
-
-    const doc = new THREE.Mesh(
-      new THREE.BoxGeometry(1.8, 2.5, 0.05),
-      new THREE.MeshStandardMaterial({
-        color: 0x080c18,
-        roughness: 0.2,
-        metalness: 0.85,
-        emissive: 0x040814,
-      })
-    );
-    smartReceiptGroup.add(doc);
-
-    const docEdges = new THREE.LineSegments(
-      new THREE.EdgesGeometry(new THREE.BoxGeometry(1.8, 2.5, 0.05)),
-      new THREE.LineBasicMaterial({ color: 0x00f0ff, linewidth: 2 })
-    );
-    smartReceiptGroup.add(docEdges);
-
-    for (let i = 0; i < 7; i++) {
-      const lineMesh = new THREE.Mesh(
-        new THREE.BoxGeometry(1.3 - (i % 3) * 0.3, 0.04, 0.02),
-        new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.75 })
-      );
-      lineMesh.position.set(-0.1 + (i % 2) * 0.1, 0.9 - i * 0.28, 0.04);
-      smartReceiptGroup.add(lineMesh);
-    }
-
-    const laser = new THREE.Mesh(
-      new THREE.BoxGeometry(2.1, 0.035, 0.08),
-      new THREE.MeshBasicMaterial({ color: 0xb8ff5a })
-    );
-    laser.position.set(0, 0, 0.07);
-    smartReceiptGroup.add(laser);
-    laserRef.current = laser;
-
-    // ====================================================
-    // SUB-SCENE 5: HOW I BUILD & ABOUT NEURAL CLUSTER
-    // ====================================================
-    const aboutGroup = new THREE.Group();
-    aboutGroup.scale.set(0.001, 0.001, 0.001);
-    mainGroup.add(aboutGroup);
-    aboutGroupRef.current = aboutGroup;
-
-    const centerSphere = new THREE.Mesh(
-      new THREE.SphereGeometry(0.75, 20, 20),
-      new THREE.MeshStandardMaterial({
-        color: 0x00f0ff,
-        emissive: 0x00f0ff,
-        emissiveIntensity: 0.5,
-        roughness: 0.15,
-        metalness: 0.85,
-      })
-    );
-    aboutGroup.add(centerSphere);
-
-    const nodeCount = 18;
-    for (let i = 0; i < nodeCount; i++) {
-      const radius = 1.65 + (i % 3) * 0.25;
-      const theta = (i / nodeCount) * Math.PI * 2;
-      const phi = ((i % 4) / 4) * Math.PI - Math.PI / 2;
-
-      const x = radius * Math.cos(phi) * Math.cos(theta);
-      const y = radius * Math.sin(phi);
-      const z = radius * Math.cos(phi) * Math.sin(theta);
-
-      const nMesh = new THREE.Mesh(
-        new THREE.SphereGeometry(0.08, 8, 8),
-        new THREE.MeshBasicMaterial({ color: i % 2 === 0 ? 0x00f0ff : 0x356dff })
-      );
-      nMesh.position.set(x, y, z);
-      aboutGroup.add(nMesh);
-
-      const sLine = new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(x, y, z)]),
-        new THREE.LineBasicMaterial({ color: 0x356dff, transparent: true, opacity: 0.4 })
-      );
-      aboutGroup.add(sLine);
-    }
-
-    // ====================================================
-    // SUB-SCENE 6: EXPERIENCE TIMELINE HELIX
-    // ====================================================
-    const experienceGroup = new THREE.Group();
-    experienceGroup.scale.set(0.001, 0.001, 0.001);
-    mainGroup.add(experienceGroup);
-    experienceGroupRef.current = experienceGroup;
-
-    for (let i = 0; i < 32; i++) {
-      const angle = i * 0.35;
-      const radius = 0.95;
-      const x = Math.cos(angle) * radius;
-      const y = (i - 16) * 0.13;
-      const z = Math.sin(angle) * radius;
-
-      const bead = new THREE.Mesh(
-        new THREE.BoxGeometry(0.14, 0.07, 0.14),
-        new THREE.MeshStandardMaterial({
-          color: i > 22 ? 0xb8ff5a : i > 12 ? 0x00f0ff : 0x356dff,
-          emissive: i > 22 ? 0xb8ff5a : 0x00f0ff,
-          emissiveIntensity: 0.45,
-        })
-      );
-      bead.position.set(x, y, z);
-      experienceGroup.add(bead);
-    }
-
-    // ====================================================
-    // SUB-SCENE 7: TECHNOLOGY ORBITAL GLOBE
-    // ====================================================
-    const technologyGroup = new THREE.Group();
-    technologyGroup.scale.set(0.001, 0.001, 0.001);
-    mainGroup.add(technologyGroup);
-    technologyGroupRef.current = technologyGroup;
-
-    const techSphere = new THREE.Mesh(
-      new THREE.SphereGeometry(1.45, 24, 24),
-      new THREE.MeshBasicMaterial({
-        color: 0x38bdf8,
-        wireframe: true,
-        transparent: true,
-        opacity: 0.35,
-      })
-    );
-    technologyGroup.add(techSphere);
-
-    [0, Math.PI / 3, -Math.PI / 3].forEach((rotX, idx) => {
-      const ring = new THREE.Mesh(
-        new THREE.TorusGeometry(1.9 + idx * 0.22, 0.016, 16, 64),
-        new THREE.MeshBasicMaterial({
-          color: idx === 0 ? 0x00f0ff : 0x356dff,
-          transparent: true,
-          opacity: 0.6,
-        })
-      );
-      ring.rotation.x = rotX;
-      ring.rotation.y = idx * 0.5;
-      technologyGroup.add(ring);
-    });
-
-    // ====================================================
-    // SUB-SCENE 8: FOOTER "D" MONOLITH
-    // ====================================================
-    const footerDGroup = new THREE.Group();
-    footerDGroup.scale.set(0.001, 0.001, 0.001);
-    mainGroup.add(footerDGroup);
-    footerDGroupRef.current = footerDGroup;
-
-    const spine = new THREE.Mesh(
-      new THREE.BoxGeometry(0.3, 2.3, 0.35),
-      new THREE.MeshStandardMaterial({
-        color: 0x00f0ff,
-        emissive: 0x00f0ff,
-        emissiveIntensity: 0.7,
-        roughness: 0.1,
-        metalness: 0.9,
-      })
-    );
-    spine.position.set(-0.65, 0, 0);
-    footerDGroup.add(spine);
-
-    const arc = new THREE.Mesh(
-      new THREE.TorusGeometry(1.15, 0.18, 16, 32, Math.PI),
-      new THREE.MeshStandardMaterial({
-        color: 0x356dff,
-        emissive: 0x356dff,
-        emissiveIntensity: 0.7,
-        roughness: 0.1,
-        metalness: 0.9,
-      })
-    );
-    arc.rotation.z = -Math.PI / 2;
-    arc.position.set(-0.65, 0, 0);
-    footerDGroup.add(arc);
-
-    setModelStatus('ready');
-    if (onModelLoaded) {
-      onModelLoaded();
-    }
-
-    // ====================================================
-    // CONTINUOUS RENDER LOOP (PHYSICS & LERP SMOOTHING)
-    // ====================================================
-    let animationFrameId: number;
-
-    const renderLoop = () => {
-      animationFrameId = requestAnimationFrame(renderLoop);
-
-      const delta = clockRef.current.getDelta();
-      const elapsedTime = clockRef.current.getElapsedTime();
-      const section = activeSectionRef.current;
-      const targetTransform = MORPH_STATES[section] || MORPH_STATES.hero;
-      const scroll = scrollStateRef.current;
-
-      // 1. Quantum Nucleus Cardiac Pulse
-      if (nucleusRef.current) {
-        const pulse = 1.0 + Math.sin(elapsedTime * 3.2) * 0.06;
-        nucleusRef.current.scale.set(pulse, pulse, pulse);
-        nucleusRef.current.rotation.y = elapsedTime * 0.4;
-        nucleusRef.current.rotation.x = elapsedTime * 0.25;
+    const blueLight = new THREE.PointLight(0x356dff, 5.0, 25);
+    blueLight.position.set(5, 5, 5);
+    scene.add(blueLight);
+
+    const cyanLight = new THREE.PointLight(0x00f0ff, 3.5, 20);
+    cyanLight.position.set(-5, -4, 4);
+    scene.add(cyanLight);
+
+    const limeLight = new THREE.PointLight(0xb8ff5a, 2.0, 15);
+    limeLight.position.set(0, -5, -3);
+    scene.add(limeLight);
+
+    // Root Group for the 3D Digital Core
+    const coreGroup = new THREE.Group();
+    scene.add(coreGroup);
+
+    // --- 1. Inner Crystalline / Energy Core (GLSL Custom Shader) ---
+    const coreVertexShader = `
+      uniform float uTime;
+      uniform float uDistortion;
+      uniform vec2 uMouse;
+      varying vec3 vNormal;
+      varying vec3 vPosition;
+      varying float vFresnel;
+
+      void main() {
+        vNormal = normalize(normalMatrix * normal);
+        vPosition = position;
+
+        // Fluid organic surface turbulence
+        float wave = sin(position.x * 2.8 + uTime * 1.1) * cos(position.y * 2.8 + uTime * 1.3) * sin(position.z * 2.2 + uTime * 0.9);
+        vec3 newPos = position + normal * (wave * uDistortion * 0.16);
+
+        vec4 mvPos = modelViewMatrix * vec4(newPos, 1.0);
+        gl_Position = projectionMatrix * mvPos;
+
+        vec3 viewDir = normalize(-mvPos.xyz);
+        vFresnel = pow(1.0 - max(dot(vNormal, viewDir), 0.0), 2.2);
       }
+    `;
 
-      // 2. Crystal Shell Glints & Rotation
-      if (crystalShellRef.current) {
-        crystalShellRef.current.rotation.y = -elapsedTime * 0.2;
-        crystalShellRef.current.rotation.z = elapsedTime * 0.15;
-        crystalShellRef.current.material.wireframe = wireframeOverride;
+    const coreFragmentShader = `
+      uniform float uTime;
+      uniform vec3 uColorBase;
+      uniform vec3 uColorRim;
+      uniform vec3 uColorSignal;
+      uniform float uSignalStrength;
+      uniform float uScanline;
+      uniform float uOpacity;
+      uniform float uIsLight;
+      varying vec3 vNormal;
+      varying vec3 vPosition;
+      varying float vFresnel;
+
+      void main() {
+        // Base glass refraction look
+        vec3 col = mix(uColorBase, uColorRim, vFresnel * 0.9);
+
+        // Technical scanline effect
+        float scan = sin(vPosition.y * 38.0 + uTime * 3.0) * (uScanline * 0.25) + (1.0 - uScanline * 0.12);
+        col *= scan;
+
+        // High-energy signal emission highlights
+        if (uSignalStrength > 0.01) {
+          col += uColorSignal * (uSignalStrength * 0.8 * vFresnel);
+        }
+
+        // Add inner radiant caustic glow
+        float innerGlow = pow(vFresnel, 1.5) * 0.4;
+        col += vec3(0.0, 0.94, 1.0) * innerGlow;
+
+        float alpha = uIsLight > 0.5 
+          ? uOpacity * (0.55 + vFresnel * 0.4) 
+          : uOpacity * (0.75 + vFresnel * 0.25);
+
+        gl_FragColor = vec4(col, alpha);
       }
+    `;
 
-      // 3. Counter-Rotating Gyroscopic Rings
-      if (ring1Ref.current) {
-        ring1Ref.current.rotation.z += 0.008 * speedMultiplier;
-        ring1Ref.current.rotation.x += 0.004 * speedMultiplier;
-      }
-      if (ring2Ref.current) {
-        ring2Ref.current.rotation.z -= 0.006 * speedMultiplier;
-        ring2Ref.current.rotation.y += 0.005 * speedMultiplier;
-      }
-
-      // 4. Animate Data Packets Traveling Along Pipelines
-      dataPacketsRef.current.forEach((pkt) => {
-        const d = pkt.userData;
-        const progress = (Math.sin(elapsedTime * d.speed + d.phase) + 1) * 0.5;
-        pkt.position.lerpVectors(d.origin, d.target, progress);
-      });
-
-      // 5. Laser Scanner Animation
-      if (laserRef.current) {
-        laserRef.current.position.y = Math.sin(elapsedTime * 2.8) * 0.95;
-      }
-
-      // 6. Smooth Mouse Parallax Physics
-      currentRotation.current.x = THREE.MathUtils.lerp(
-        currentRotation.current.x,
-        targetRotation.current.x,
-        delta * 4.5
-      );
-      currentRotation.current.y = THREE.MathUtils.lerp(
-        currentRotation.current.y,
-        targetRotation.current.y,
-        delta * 4.5
-      );
-
-      // 7. Dynamic Continuous Scroll Reaction
-      const scrollOffsetRot = scroll.progress * Math.PI * 2;
-      const scrollVelocityTilt = THREE.MathUtils.clamp(scroll.velocity * 0.0008, -0.3, 0.3);
-
-      // 8. Smooth World Position Lerp
-      const isDesktop = window.innerWidth > 1024;
-      const targetX = isDesktop ? targetTransform.pos[0] : 0;
-      const targetY = targetTransform.pos[1];
-      const targetZ = targetTransform.pos[2];
-
-      currentPosition.current.x = THREE.MathUtils.lerp(currentPosition.current.x, targetX, delta * 3.8);
-      currentPosition.current.y = THREE.MathUtils.lerp(currentPosition.current.y, targetY, delta * 3.8);
-      currentPosition.current.z = THREE.MathUtils.lerp(currentPosition.current.z, targetZ, delta * 3.8);
-
-      if (mainGroupRef.current) {
-        mainGroupRef.current.position.set(
-          currentPosition.current.x,
-          currentPosition.current.y,
-          currentPosition.current.z
-        );
-
-        // Continuous rotational dynamics responding smoothly to scroll
-        mainGroupRef.current.rotation.y += targetTransform.rotSpeed * speedMultiplier;
-        mainGroupRef.current.rotation.x = THREE.MathUtils.lerp(
-          mainGroupRef.current.rotation.x,
-          currentRotation.current.x + scrollVelocityTilt,
-          delta * 4.0
-        );
-        mainGroupRef.current.rotation.z = THREE.MathUtils.lerp(
-          mainGroupRef.current.rotation.z,
-          currentRotation.current.y * 0.5,
-          delta * 4.0
-        );
-      }
-
-      // Starfield subtle rotation
-      if (particlesRef.current) {
-        particlesRef.current.rotation.y = elapsedTime * 0.02 + scrollOffsetRot * 0.1;
-        particlesRef.current.rotation.x = elapsedTime * 0.01;
-      }
-
-      // Sub-model Scaling Transitions (Smooth Ease Curves)
-      const lerpSpeed = Math.min(1, delta * 6.5);
-
-      const targetHero = (section === 'hero' || section === 'intro') ? 1 : 0.001;
-      const targetBiz = section === 'bizdhan' ? 1 : 0.001;
-      const targetClear = section === 'clearclaim' ? 1 : 0.001;
-      const targetSmart = section === 'smartreceipt' ? 1 : 0.001;
-      const targetAbout = (section === 'about' || section === 'howibuild') ? 1 : 0.001;
-      const targetExp = section === 'experience' ? 1 : 0.001;
-      const targetTech = section === 'technology' ? 1 : 0.001;
-      const targetFooter = (section === 'contact' || section === 'footer') ? 1 : 0.001;
-
-      const updateGroupScale = (group: THREE.Group | null, targetScale: number) => {
-        if (!group) return;
-        const cur = group.scale.x;
-        const next = THREE.MathUtils.lerp(cur, targetScale, lerpSpeed);
-        group.scale.set(next, next, next);
-        group.visible = next > 0.01;
-      };
-
-      updateGroupScale(heroGroupRef.current, targetHero);
-      updateGroupScale(bizdhanGroupRef.current, targetBiz);
-      updateGroupScale(clearclaimGroupRef.current, targetClear);
-      updateGroupScale(smartReceiptGroupRef.current, targetSmart);
-      updateGroupScale(aboutGroupRef.current, targetAbout);
-      updateGroupScale(experienceGroupRef.current, targetExp);
-      updateGroupScale(technologyGroupRef.current, targetTech);
-      updateGroupScale(footerDGroupRef.current, targetFooter);
-
-      renderer.render(scene, camera);
+    const coreUniforms = {
+      uTime: { value: 0 },
+      uDistortion: { value: 0.22 },
+      uMouse: { value: new THREE.Vector2(0, 0) },
+      uColorBase: { value: new THREE.Color(themeRef.current === 'light' ? '#FFFFFF' : '#040711') },
+      uColorRim: { value: new THREE.Color('#356DFF') },
+      uColorSignal: { value: new THREE.Color('#00F0FF') },
+      uSignalStrength: { value: 0.25 },
+      uScanline: { value: 0.18 },
+      uOpacity: { value: 0.92 },
+      uIsLight: { value: themeRef.current === 'light' ? 1.0 : 0.0 },
     };
 
-    renderLoop();
+    const coreGeo = new THREE.IcosahedronGeometry(1.65, 6);
+    const coreMat = new THREE.ShaderMaterial({
+      vertexShader: coreVertexShader,
+      fragmentShader: coreFragmentShader,
+      uniforms: coreUniforms,
+      transparent: true,
+      side: THREE.FrontSide,
+    });
+    const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+    coreGroup.add(coreMesh);
 
-    // Resize Observer
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const { width: w, height: h } = entry.contentRect;
-        if (w > 0 && h > 0 && cameraRef.current && rendererRef.current) {
-          cameraRef.current.aspect = w / h;
-          cameraRef.current.updateProjectionMatrix();
-          rendererRef.current.setSize(w, h);
+    // --- 2. Outer Faceted Geodesic Cage ---
+    const cageGeo = new THREE.IcosahedronGeometry(1.95, 1);
+    const cageMat = new THREE.MeshBasicMaterial({
+      color: 0x356dff,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.3,
+    });
+    const cageMesh = new THREE.Mesh(cageGeo, cageMat);
+    coreGroup.add(cageMesh);
+
+    // --- 3. Concentric Gyroscopic Orbital Rings ---
+    const ringGroup = new THREE.Group();
+    coreGroup.add(ringGroup);
+
+    const createRing = (radius: number, tiltX: number, tiltY: number, colorHex: number, opacity: number) => {
+      const ringGeo = new THREE.TorusGeometry(radius, 0.015, 16, 120);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: colorHex,
+        transparent: true,
+        opacity,
+      });
+      const mesh = new THREE.Mesh(ringGeo, ringMat);
+      mesh.rotation.x = tiltX;
+      mesh.rotation.y = tiltY;
+      return mesh;
+    };
+
+    const ring1 = createRing(3.1, Math.PI / 3, 0.2, 0x356dff, 0.45);
+    const ring2 = createRing(3.5, -Math.PI / 3.8, 0.5, 0x00f0ff, 0.4);
+    const ring3 = createRing(2.7, Math.PI / 2.1, -0.4, 0xb8ff5a, 0.35);
+    ringGroup.add(ring1, ring2, ring3);
+
+    // Glowing orbital beads / satellites on rings
+    const createSatellite = (size: number, colorHex: number) => {
+      const satGeo = new THREE.SphereGeometry(size, 16, 16);
+      const satMat = new THREE.MeshBasicMaterial({
+        color: colorHex,
+      });
+      return new THREE.Mesh(satGeo, satMat);
+    };
+
+    const sat1 = createSatellite(0.08, 0x00f0ff);
+    const sat2 = createSatellite(0.07, 0x356dff);
+    const sat3 = createSatellite(0.06, 0xb8ff5a);
+    ring1.add(sat1);
+    ring2.add(sat2);
+    ring3.add(sat3);
+    sat1.position.set(3.1, 0, 0);
+    sat2.position.set(3.5, 0, 0);
+    sat3.position.set(2.7, 0, 0);
+
+    // --- 4. Orbiting Telemetry Network Nodes ---
+    const NODE_COUNT = 52;
+    const nodePositions: THREE.Vector3[] = [];
+    const nodeSpeeds: number[] = [];
+    const nodeRadii: number[] = [];
+
+    const nodesGeo = new THREE.BufferGeometry();
+    const nodePositionsArr = new Float32Array(NODE_COUNT * 3);
+
+    for (let i = 0; i < NODE_COUNT; i++) {
+      const phi = Math.acos(-1 + (2 * i) / NODE_COUNT);
+      const theta = Math.sqrt(NODE_COUNT * Math.PI) * phi;
+      const radius = 2.5 + (i % 6) * 0.3;
+
+      const x = radius * Math.sin(phi) * Math.cos(theta);
+      const y = radius * Math.sin(phi) * Math.sin(theta);
+      const z = radius * Math.cos(phi);
+
+      nodePositions.push(new THREE.Vector3(x, y, z));
+      nodeSpeeds.push(0.003 + (i % 4) * 0.0015);
+      nodeRadii.push(radius);
+
+      nodePositionsArr[i * 3] = x;
+      nodePositionsArr[i * 3 + 1] = y;
+      nodePositionsArr[i * 3 + 2] = z;
+    }
+
+    nodesGeo.setAttribute('position', new THREE.BufferAttribute(nodePositionsArr, 3));
+
+    const nodesMat = new THREE.PointsMaterial({
+      color: 0x00f0ff,
+      size: 0.085,
+      transparent: true,
+      opacity: 0.9,
+    });
+    const nodesMesh = new THREE.Points(nodesGeo, nodesMat);
+    coreGroup.add(nodesMesh);
+
+    // Connecting Lines between near nodes
+    const MAX_LINES = 100;
+    const linePositions = new Float32Array(MAX_LINES * 2 * 3);
+    const lineGeo = new THREE.BufferGeometry();
+    lineGeo.setAttribute('position', new THREE.BufferAttribute(linePositions, 3));
+
+    const lineMat = new THREE.LineBasicMaterial({
+      color: 0x356dff,
+      transparent: true,
+      opacity: 0.22,
+    });
+    const lineMesh = new THREE.LineSegments(lineGeo, lineMat);
+    coreGroup.add(lineMesh);
+
+    // Handle Window Resize
+    const handleResize = () => {
+      if (!container) return;
+      const w = container.clientWidth || window.innerWidth;
+      const h = container.clientHeight || window.innerHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    };
+    window.addEventListener('resize', handleResize);
+
+    // Interactive Drag Physics
+    let isDragging = false;
+    let prevMouseX = 0;
+    let prevMouseY = 0;
+    let dragRotX = 0;
+    let dragRotY = 0;
+
+    const onPointerDown = (e: MouseEvent) => {
+      isDragging = true;
+      prevMouseX = e.clientX;
+      prevMouseY = e.clientY;
+    };
+
+    const onPointerMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      const deltaX = e.clientX - prevMouseX;
+      const deltaY = e.clientY - prevMouseY;
+      dragRotY += deltaX * 0.008;
+      dragRotX += deltaY * 0.008;
+      prevMouseX = e.clientX;
+      prevMouseY = e.clientY;
+    };
+
+    const onPointerUp = () => {
+      isDragging = false;
+    };
+
+    window.addEventListener('mousedown', onPointerDown);
+    window.addEventListener('mousemove', onPointerMove);
+    window.addEventListener('mouseup', onPointerUp);
+
+    // Animation Loop
+    let animationId: number;
+    const clock = new THREE.Clock();
+
+    let currentLerp = {
+      coreScale: 1.0,
+      distortion: 0.22,
+      signalStrength: 0.25,
+      scanline: 0.18,
+      cageOpacity: 0.3,
+      ringScale: 1.0,
+      targetRotSpeed: 0.0035,
+      posX: 2.2,
+      posY: 0.1,
+    };
+
+    const render = () => {
+      const elapsed = clock.getElapsedTime();
+      const isDesktop = window.innerWidth >= 1024;
+      const isLight = themeRef.current === 'light';
+
+      // Update theme uniforms & lighting
+      ambientLight.intensity = isLight ? 1.1 : 0.7;
+      coreUniforms.uIsLight.value = isLight ? 1.0 : 0.0;
+      coreUniforms.uColorBase.value.lerp(new THREE.Color(isLight ? '#EBF2FF' : '#040711'), 0.08);
+      cageMat.color.lerp(new THREE.Color(isLight ? '#2563EB' : '#356DFF'), 0.08);
+
+      // Section target parameters
+      const activeParams = SECTION_PARAMS[sectionRef.current] || SECTION_PARAMS.hero;
+      const targetPosX = isDesktop ? activeParams.posXDesktop : 0;
+      const targetPosY = isDesktop ? activeParams.posYDesktop : (sectionRef.current === 'hero' ? 0.8 : 0);
+
+      // Smooth state interpolation (lerp)
+      currentLerp.coreScale += (activeParams.coreRadius / 1.65 - currentLerp.coreScale) * 0.04;
+      currentLerp.distortion += (activeParams.distortion - currentLerp.distortion) * 0.05;
+      currentLerp.signalStrength += (activeParams.signalStrength - currentLerp.signalStrength) * 0.05;
+      currentLerp.scanline += (activeParams.scanlineIntensity - currentLerp.scanline) * 0.05;
+      currentLerp.cageOpacity += (activeParams.wireframeOpacity - currentLerp.cageOpacity) * 0.05;
+      currentLerp.ringScale += (activeParams.ringsRadius / 3.2 - currentLerp.ringScale) * 0.04;
+      currentLerp.targetRotSpeed += (activeParams.rotSpeed - currentLerp.targetRotSpeed) * 0.05;
+      currentLerp.posX += (targetPosX - currentLerp.posX) * 0.04;
+      currentLerp.posY += (targetPosY - currentLerp.posY) * 0.04;
+
+      // Update shader uniforms
+      coreUniforms.uTime.value = elapsed;
+      coreUniforms.uDistortion.value = currentLerp.distortion;
+      coreUniforms.uSignalStrength.value = currentLerp.signalStrength;
+      coreUniforms.uScanline.value = currentLerp.scanline;
+      coreUniforms.uColorRim.value.lerp(activeParams.colorRim, 0.05);
+      coreUniforms.uColorSignal.value.lerp(activeParams.colorSignal, 0.05);
+
+      // Apply transforms
+      coreMesh.scale.setScalar(currentLerp.coreScale);
+      cageMesh.scale.setScalar(currentLerp.coreScale * 1.16);
+      cageMat.opacity = currentLerp.cageOpacity;
+      ringGroup.scale.setScalar(currentLerp.ringScale);
+
+      // Position in viewport
+      coreGroup.position.x = currentLerp.posX;
+      coreGroup.position.y = currentLerp.posY;
+
+      // Rotations & drag dampening
+      coreGroup.rotation.y += currentLerp.targetRotSpeed + dragRotY * 0.1;
+      coreGroup.rotation.x += dragRotX * 0.1;
+      dragRotX *= 0.92;
+      dragRotY *= 0.92;
+
+      cageMesh.rotation.x -= currentLerp.targetRotSpeed * 0.8;
+      cageMesh.rotation.z += currentLerp.targetRotSpeed * 0.5;
+
+      ring1.rotation.z += 0.0025;
+      ring2.rotation.z -= 0.003;
+      ring3.rotation.z += 0.0035;
+
+      // Pointer deflection
+      const targetParallaxX = mouseRef.current.y * 0.25;
+      const targetParallaxY = mouseRef.current.x * 0.35;
+      coreGroup.rotation.x += (targetParallaxX - coreGroup.rotation.x) * 0.03;
+      coreGroup.rotation.y += (targetParallaxY - coreGroup.rotation.y) * 0.03;
+
+      // Update node positions and calculate nearest connection lines
+      const positionsAttr = nodesGeo.attributes.position as THREE.BufferAttribute;
+      const posArray = positionsAttr.array as Float32Array;
+
+      let lineIndex = 0;
+      for (let i = 0; i < NODE_COUNT; i++) {
+        const speed = nodeSpeeds[i];
+        const rad = nodeRadii[i] * (activeParams.nodeSpread / 2.8);
+
+        const ang = elapsed * speed + (i * 0.4);
+        const x = Math.cos(ang) * rad;
+        const y = Math.sin(ang * 0.8) * (rad * 0.8);
+        const z = Math.sin(ang) * rad;
+
+        posArray[i * 3] = x;
+        posArray[i * 3 + 1] = y;
+        posArray[i * 3 + 2] = z;
+
+        for (let j = i + 1; j < NODE_COUNT && lineIndex < MAX_LINES; j++) {
+          const dx = x - posArray[j * 3];
+          const dy = y - posArray[j * 3 + 1];
+          const dz = z - posArray[j * 3 + 2];
+          const distSq = dx * dx + dy * dy + dz * dz;
+
+          if (distSq < 1.9) {
+            linePositions[lineIndex * 6] = x;
+            linePositions[lineIndex * 6 + 1] = y;
+            linePositions[lineIndex * 6 + 2] = z;
+            linePositions[lineIndex * 6 + 3] = posArray[j * 3];
+            linePositions[lineIndex * 6 + 4] = posArray[j * 3 + 1];
+            linePositions[lineIndex * 6 + 5] = posArray[j * 3 + 2];
+            lineIndex++;
+          }
         }
       }
-    });
 
-    resizeObserver.observe(containerRef.current);
+      for (let k = lineIndex; k < MAX_LINES; k++) {
+        linePositions[k * 6] = 0;
+        linePositions[k * 6 + 1] = 0;
+        linePositions[k * 6 + 2] = 0;
+        linePositions[k * 6 + 3] = 0;
+        linePositions[k * 6 + 4] = 0;
+        linePositions[k * 6 + 5] = 0;
+      }
 
-    // Global Pointer Interaction
-    const handleGlobalPointerMove = (e: MouseEvent) => {
-      const normX = (e.clientX / window.innerWidth) * 2 - 1;
-      const normY = -((e.clientY / window.innerHeight) * 2 - 1);
+      positionsAttr.needsUpdate = true;
+      (lineGeo.attributes.position as THREE.BufferAttribute).needsUpdate = true;
 
-      targetRotation.current.y = normX * 0.6;
-      targetRotation.current.x = -normY * 0.35;
-
-      sound.onPointerMoveAudio(normX, normY);
+      renderer.render(scene, camera);
+      animationId = requestAnimationFrame(render);
     };
 
-    window.addEventListener('pointermove', handleGlobalPointerMove, { passive: true });
+    render();
 
     return () => {
-      cancelAnimationFrame(animationFrameId);
-      resizeObserver.disconnect();
-      window.removeEventListener('pointermove', handleGlobalPointerMove);
-      if (rendererRef.current && rendererRef.current.domElement) {
-        rendererRef.current.domElement.remove();
-        rendererRef.current.dispose();
+      cancelAnimationFrame(animationId);
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('mousedown', onPointerDown);
+      window.removeEventListener('mousemove', onPointerMove);
+      window.removeEventListener('mouseup', onPointerUp);
+      if (container && renderer.domElement && container.contains(renderer.domElement)) {
+        container.removeChild(renderer.domElement);
       }
+      renderer.dispose();
+      coreGeo.dispose();
+      coreMat.dispose();
+      cageGeo.dispose();
+      cageMat.dispose();
+      nodesGeo.dispose();
+      nodesMat.dispose();
+      lineGeo.dispose();
+      lineMat.dispose();
     };
-  }, [distortionMultiplier, onModelLoaded, speedMultiplier, wireframeOverride]);
+  }, []);
 
   return (
     <div
       ref={containerRef}
-      id="three-canvas-container"
-      className="fixed inset-0 pointer-events-none z-0 overflow-hidden"
-      aria-label="Interactive 3D Digital Core WebGL Scene"
-    >
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none -z-10" />
-    </div>
+      id="digital-core-canvas"
+      className="digital-core fixed inset-0 pointer-events-none z-0 transition-opacity duration-1000 ease-out"
+      style={{
+        opacity: preloaderComplete ? 1 : 0,
+      }}
+      aria-hidden="true"
+    />
   );
-};
+}

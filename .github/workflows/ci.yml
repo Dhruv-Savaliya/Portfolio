@@ -1,0 +1,39 @@
+name: Autonomous Vercel Production Build Verification
+
+on:
+  push:
+    branches: [ main, feat/* ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  verify-production-build:
+    name: Verify Vite Production Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Production Dependencies
+        run: npm ci
+
+      - name: Run Type Check / Lint
+        run: npm run lint
+
+      - name: Build Vite Distribution (dist/)
+        run: npm run build
+
+      - name: Assert Build Artifacts Exist
+        run: |
+          if [ ! -f "dist/index.html" ]; then
+            echo "::error::Critical failure: dist/index.html does not exist!"
+            exit 1
+          fi
+          echo "Autonomous verification passed: dist/ ready for Vercel deployment."

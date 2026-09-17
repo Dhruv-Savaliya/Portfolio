@@ -1,7 +1,6 @@
 {
-  "name": "Dhruv Savaliya — Cinematic Portfolio",
-  "description": "Interactive 3D developer portfolio featuring the Digital Core, Three.js WebGL morphing, React Spring fluid physics, and neon glassmorphism.",
+  "name": "Dhruv Savaliya Portfolio",
+  "description": "Dhruv Savaliya’s portfolio – full-stack, AI, and interactive 3D web applications with cinematic glassmorphism and 3D digital core.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
-
